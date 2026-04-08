@@ -9,28 +9,22 @@ interface ModelPricing {
 
 export const PRICING: Record<string, ModelPricing> = {
   'claude-opus-4-6': {
-    input:      15.00 / 1_000_000,
-    output:     75.00 / 1_000_000,
-    cacheWrite: 18.75 / 1_000_000,
-    cacheRead:   1.50 / 1_000_000,
-  },
-  'claude-opus-4-5-20251101': {
-    input:      15.00 / 1_000_000,
-    output:     75.00 / 1_000_000,
-    cacheWrite: 18.75 / 1_000_000,
-    cacheRead:   1.50 / 1_000_000,
+    input:      5.00 / 1_000_000,
+    output:     25.00 / 1_000_000,
+    cacheWrite: 6.25 / 1_000_000,
+    cacheRead:  0.50 / 1_000_000,
   },
   'claude-sonnet-4-6': {
-    input:       3.00 / 1_000_000,
+    input:      3.00 / 1_000_000,
     output:     15.00 / 1_000_000,
-    cacheWrite:  3.75 / 1_000_000,
-    cacheRead:   0.30 / 1_000_000,
+    cacheWrite: 3.75 / 1_000_000,
+    cacheRead:  0.30 / 1_000_000,
   },
   'claude-haiku-4-5': {
-    input:       0.80 / 1_000_000,
-    output:       4.00 / 1_000_000,
-    cacheWrite:   1.00 / 1_000_000,
-    cacheRead:    0.08 / 1_000_000,
+    input:      1.00 / 1_000_000,
+    output:     5.00 / 1_000_000,
+    cacheWrite: 1.25 / 1_000_000,
+    cacheRead:  0.10 / 1_000_000,
   },
 }
 
