@@ -3,20 +3,20 @@ import { formatTokens } from '@/lib/decode'
 
 export function CompactionCard({ event }: { event: CompactionEvent }) {
   return (
-    <div className="my-3 border border-amber-500/40 bg-amber-500/10 rounded-lg px-4 py-3">
-      <div className="flex items-center gap-2 text-amber-400 text-sm font-bold mb-1">
+    <div className="my-3 border border-[rgba(224,179,65,0.30)] bg-[rgba(224,179,65,0.06)] rounded-lg px-4 py-3">
+      <div className="flex items-center gap-2 text-[var(--warning)] text-xs font-mono font-medium uppercase tracking-[0.14em] mb-1.5">
         <span>⚡</span>
-        <span>CONTEXT COMPACTION</span>
-        <span className="ml-auto text-amber-500/70 font-normal">
+        <span>Context Compaction</span>
+        <span className="ml-auto text-[var(--warning)]/70 font-normal tabular-nums">
           {new Date(event.timestamp).toLocaleTimeString()}
         </span>
       </div>
-      <div className="flex gap-4 text-sm text-amber-300/80">
-        <span>trigger: <span className="text-amber-300 font-medium">{event.trigger}</span></span>
-        <span>context before: <span className="text-amber-300 font-medium">{formatTokens(event.pre_tokens)} tokens</span></span>
+      <div className="flex gap-4 text-xs text-foreground/70">
+        <span>trigger: <span className="text-foreground font-medium">{event.trigger}</span></span>
+        <span>context before: <span className="text-foreground font-medium tabular-nums">{formatTokens(event.pre_tokens)} tokens</span></span>
       </div>
       {event.summary && (
-        <p className="mt-1.5 text-sm text-amber-200/60 italic line-clamp-2">
+        <p className="mt-1.5 text-xs text-muted-foreground italic line-clamp-2">
           &ldquo;{event.summary}&rdquo;
         </p>
       )}

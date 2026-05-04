@@ -10,18 +10,12 @@ import {
 } from 'recharts'
 import type { ModelUsage } from '@/types/claude'
 import { formatTokens } from '@/lib/decode'
+import { getChartSeries } from '@/lib/chart-palette'
+import { useTheme } from '@/components/theme-provider'
 
 interface Props {
   modelUsage: Record<string, ModelUsage>
 }
-
-const MODEL_COLORS = [
-  '#d97706',
-  '#34d399',
-  '#2563eb',
-  '#a78bfa',
-  '#fbbf24',
-]
 
 function shortModelName(model: string): string {
   if (model.includes('opus-4-6'))      return 'Opus 4.6'
@@ -47,6 +41,8 @@ function CustomTooltip({ active, payload }: any) {
 }
 
 export function ModelBreakdownDonut({ modelUsage }: Props) {
+  const { theme } = useTheme()
+  const series = getChartSeries(theme)
   const data = Object.entries(modelUsage)
     .map(([model, usage]) => ({
       name: shortModelName(model),
@@ -77,7 +73,7 @@ export function ModelBreakdownDonut({ modelUsage }: Props) {
           strokeWidth={0}
         >
           {data.map((_, i) => (
-            <Cell key={i} fill={MODEL_COLORS[i % MODEL_COLORS.length]} />
+            <Cell key={i} fill={series[i % series.length]} />
           ))}
         </Pie>
         <Tooltip content={<CustomTooltip />} />

@@ -9,10 +9,9 @@ interface Props {
   data: DailyActivity[]
 }
 
-// dark:  empty → dark gray → dim green → mid green → bright green
-const DARK_SHADES  = ['#1e2128', '#1e3a2f', '#16a34a', '#22c55e', '#86efac']
-// light: empty cell reads against zinc canvas; greens stay saturated for contrast
-const LIGHT_SHADES = ['#d4d4d8', '#86efac', '#4ade80', '#16a34a', '#14532d']
+// Indigo opacity ramp — Nightshift "single accent". Empty → faint → soft → mid → strong.
+const DARK_SHADES  = ['#1C1C24', 'rgba(99,102,241,0.22)', 'rgba(99,102,241,0.40)', 'rgba(99,102,241,0.65)', '#818CF8']
+const LIGHT_SHADES = ['#EAE7E0', 'rgba(99,102,241,0.18)', 'rgba(99,102,241,0.34)', 'rgba(99,102,241,0.58)', '#6366F1']
 
 const DAY_LABELS = ['', 'Mon', '', 'Wed', '', 'Fri', '']
 

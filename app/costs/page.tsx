@@ -22,7 +22,7 @@ const fetcher = (url: string) =>
 
 export default function CostsPage() {
   const [range, setRange] = useState(DEFAULT_DATE_RANGE)
-  const { data, error, isLoading } = useSWR<CostAnalytics>('/api/costs', fetcher, { refreshInterval: 5_000 })
+  const { data, error, isLoading } = useSWR<CostAnalytics>('/api/costs', fetcher, { refreshInterval: 60_000 })
 
   // Filter daily data to selected range + recompute windowed cost.
   const windowed = useMemo(() => {
@@ -76,7 +76,7 @@ export default function CostsPage() {
                   <CardDescription className="flex items-center gap-2">
                     <DollarSign className="w-4 h-4" /> Estimated Cost
                   </CardDescription>
-                  <CardTitle className="text-3xl font-bold tabular-nums font-mono text-[#d97706]">
+                  <CardTitle className="text-3xl font-bold tabular-nums font-mono text-primary tracking-[-0.02em]">
                     {formatCost(windowed.windowCost)}
                   </CardTitle>
                 </CardHeader>
@@ -92,7 +92,7 @@ export default function CostsPage() {
                   <CardDescription className="flex items-center gap-2">
                     <TrendingDown className="w-4 h-4" /> Cache Savings (all-time)
                   </CardDescription>
-                  <CardTitle className="text-3xl font-bold tabular-nums font-mono text-[#34d399]">
+                  <CardTitle className="text-3xl font-bold tabular-nums font-mono text-[var(--success)] tracking-[-0.02em]">
                     {formatCost(data.total_savings)}
                   </CardTitle>
                 </CardHeader>
@@ -106,7 +106,7 @@ export default function CostsPage() {
                   <CardDescription className="flex items-center gap-2">
                     <Banknote className="w-4 h-4" /> Without Cache (all-time)
                   </CardDescription>
-                  <CardTitle className="text-3xl font-bold tabular-nums font-mono text-red-400">
+                  <CardTitle className="text-3xl font-bold tabular-nums font-mono text-[var(--error)]">
                     {formatCost(data.total_cost + data.total_savings)}
                   </CardTitle>
                 </CardHeader>
@@ -190,10 +190,10 @@ export default function CostsPage() {
                     {Object.entries(PRICING).map(([model, p]) => (
                       <TableRow key={model}>
                         <TableCell className="font-mono text-sm">{model}</TableCell>
-                        <TableCell className="text-right font-mono text-blue-700 dark:text-[#60a5fa]">${(p.input * 1_000_000).toFixed(2)}</TableCell>
-                        <TableCell className="text-right font-mono text-[#d97706]">${(p.output * 1_000_000).toFixed(2)}</TableCell>
-                        <TableCell className="text-right font-mono text-[#a78bfa]">${(p.cacheWrite * 1_000_000).toFixed(2)}</TableCell>
-                        <TableCell className="text-right font-mono text-[#34d399]">${(p.cacheRead * 1_000_000).toFixed(2)}</TableCell>
+                        <TableCell className="text-right font-mono text-foreground/70">${(p.input * 1_000_000).toFixed(2)}</TableCell>
+                        <TableCell className="text-right font-mono text-primary">${(p.output * 1_000_000).toFixed(2)}</TableCell>
+                        <TableCell className="text-right font-mono text-foreground/60">${(p.cacheWrite * 1_000_000).toFixed(2)}</TableCell>
+                        <TableCell className="text-right font-mono text-[var(--success)]">${(p.cacheRead * 1_000_000).toFixed(2)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

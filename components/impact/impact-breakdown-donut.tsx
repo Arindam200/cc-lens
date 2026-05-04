@@ -3,16 +3,11 @@
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { formatEnergy } from '@/lib/impact'
 import type { TokenTypeImpact } from '@/types/claude'
+import { getChartSeries } from '@/lib/chart-palette'
+import { useTheme } from '@/components/theme-provider'
 
 interface Props {
   byTokenType: TokenTypeImpact
-}
-
-const COLORS: Record<string, string> = {
-  Input: '#60a5fa',
-  Output: '#d97706',
-  'Cache Read': '#34d399',
-  'Cache Write': '#a78bfa',
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -28,6 +23,8 @@ function CustomTooltip({ active, payload }: any) {
 }
 
 export function ImpactBreakdownDonut({ byTokenType }: Props) {
+  const { theme } = useTheme()
+  const series = getChartSeries(theme)
   const data = [
     { name: 'Input', value: byTokenType.input.energy_wh },
     { name: 'Output', value: byTokenType.output.energy_wh },
@@ -56,8 +53,8 @@ export function ImpactBreakdownDonut({ byTokenType }: Props) {
           dataKey="value"
           strokeWidth={0}
         >
-          {data.map((d, i) => (
-            <Cell key={i} fill={COLORS[d.name]} />
+          {data.map((_, i) => (
+            <Cell key={i} fill={series[i % series.length]} />
           ))}
         </Pie>
         <Tooltip content={<CustomTooltip />} />

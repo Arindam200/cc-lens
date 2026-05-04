@@ -39,8 +39,8 @@ export function EquivalencesPanel({ impact }: Props) {
       {/* Energy */}
       <div>
         <div className="flex items-center gap-2 mb-3">
-          <Zap className="w-4 h-4 text-[#f59e0b]" />
-          <h4 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Énergie</h4>
+          <Zap className="w-4 h-4 text-[var(--warning)]" />
+          <h4 className="font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Énergie</h4>
         </div>
         <ul className="space-y-2">
           <Item value={formatCount(wh / EQUIVALENCES.energy.led_hours)} label="heures d'ampoule LED (10W)" />
@@ -53,8 +53,8 @@ export function EquivalencesPanel({ impact }: Props) {
       {/* Water */}
       <div>
         <div className="flex items-center gap-2 mb-3">
-          <Droplet className="w-4 h-4 text-[#60a5fa]" />
-          <h4 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Eau</h4>
+          <Droplet className="w-4 h-4 text-primary" />
+          <h4 className="font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Eau</h4>
         </div>
         <ul className="space-y-2">
           <Item value={formatCount(ml / EQUIVALENCES.water.glass)} label="verres d'eau (25 cL)" />
@@ -66,8 +66,8 @@ export function EquivalencesPanel({ impact }: Props) {
       {/* CO₂ */}
       <div>
         <div className="flex items-center gap-2 mb-3">
-          <Cloud className="w-4 h-4 text-[#dc2626]" />
-          <h4 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">CO₂</h4>
+          <Cloud className="w-4 h-4 text-[var(--error)]" />
+          <h4 className="font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">CO₂</h4>
         </div>
         <ul className="space-y-2">
           <Item value={formatCount(g / EQUIVALENCES.co2.petrol_car_km)} unit="km" label="en voiture essence" />

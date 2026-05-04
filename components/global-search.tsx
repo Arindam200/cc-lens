@@ -110,7 +110,7 @@ export function GlobalSearch() {
                   value={`${s.slug ?? ''} ${s.first_prompt ?? ''} ${projectDisplayName(s.project_path ?? '')}`}
                   onSelect={() => navigate(`/sessions/${s.session_id}`)}
                 >
-                  <FileText className="w-3.5 h-3.5 text-blue-700 dark:text-blue-400 shrink-0" />
+                  <FileText className="w-3.5 h-3.5 text-primary shrink-0" />
                   <div className="flex-1 min-w-0">
                     <span className="text-sm">{s.slug ?? s.session_id.slice(0, 12)}</span>
                     {s.first_prompt && (
@@ -134,7 +134,7 @@ export function GlobalSearch() {
                   value={`${p.display_name} ${p.slug}`}
                   onSelect={() => navigate(`/projects/${p.slug}`)}
                 >
-                  <FolderOpen className="w-3.5 h-3.5 text-green-400 shrink-0" />
+                  <FolderOpen className="w-3.5 h-3.5 text-[var(--success)] shrink-0" />
                   <span className="flex-1 truncate">{p.display_name}</span>
                   <CommandShortcut>{p.session_count} sessions</CommandShortcut>
                 </CommandItem>
@@ -153,7 +153,7 @@ export function GlobalSearch() {
                   value={`${p.name} ${(p.content ?? '').slice(0, 200)}`}
                   onSelect={() => navigate('/plans')}
                 >
-                  <Layers className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                  <Layers className="w-3.5 h-3.5 text-primary shrink-0" />
                   <span className="flex-1 truncate">{p.name}</span>
                   <CommandShortcut>plan</CommandShortcut>
                 </CommandItem>
@@ -172,7 +172,7 @@ export function GlobalSearch() {
                   value={`${m.name ?? ''} ${m.description ?? ''} ${(m.body ?? '').slice(0, 100)}`}
                   onSelect={() => navigate('/memory')}
                 >
-                  <Brain className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <Brain className="w-3.5 h-3.5 text-[var(--warning)] shrink-0" />
                   <span className="flex-1 truncate">{m.name}</span>
                   <CommandShortcut>{m.type}</CommandShortcut>
                 </CommandItem>

@@ -46,15 +46,15 @@ function normalizeStatus(s?: string): string {
 }
 
 const PRIORITY_STYLES: Record<string, string> = {
-  high:   'bg-red-500/10 text-red-400 border-red-500/30',
-  medium: 'bg-amber-500/10 text-amber-400 border-amber-500/30',
-  low:    'bg-muted text-muted-foreground border-border',
+  high:   'bg-[rgba(239,68,68,0.10)] text-[var(--error)] border-[rgba(239,68,68,0.30)]',
+  medium: 'bg-[rgba(224,179,65,0.10)] text-[var(--warning)] border-[rgba(224,179,65,0.28)]',
+  low:    'bg-secondary text-muted-foreground border-border',
 }
 
 const STATUS_META: Record<string, { icon: React.ElementType; color: string; label: string }> = {
-  pending:     { icon: Circle,      color: 'text-muted-foreground',  label: 'Pending'     },
-  in_progress: { icon: CircleDot,   color: 'text-amber-400',         label: 'In Progress' },
-  completed:   { icon: CircleCheck, color: 'text-emerald-400',        label: 'Completed'  },
+  pending:     { icon: Circle,      color: 'text-muted-foreground',   label: 'Pending'     },
+  in_progress: { icon: CircleDot,   color: 'text-[var(--warning)]',   label: 'In Progress' },
+  completed:   { icon: CircleCheck, color: 'text-[var(--success)]',   label: 'Completed'   },
 }
 
 function TodoRow({ item, file }: { item: TodoItem; file: TodoFile }) {
@@ -158,12 +158,12 @@ export default function TodosPage() {
                   <Badge variant="secondary" className="text-xs tabular-nums">{counts.pending}</Badge>
                 </TabsTrigger>
                 <TabsTrigger value="in_progress" className="gap-2">
-                  <CircleDot className="w-3.5 h-3.5 text-amber-400" />
+                  <CircleDot className="w-3.5 h-3.5 text-[var(--warning)]" />
                   In Progress
                   <Badge variant="secondary" className="text-xs tabular-nums">{counts.in_progress}</Badge>
                 </TabsTrigger>
                 <TabsTrigger value="completed" className="gap-2">
-                  <CircleCheck className="w-3.5 h-3.5 text-emerald-400" />
+                  <CircleCheck className="w-3.5 h-3.5 text-[var(--success)]" />
                   Done
                   <Badge variant="secondary" className="text-xs tabular-nums">{counts.completed}</Badge>
                 </TabsTrigger>
@@ -183,7 +183,7 @@ export default function TodosPage() {
 
             {(search || filter !== 'all') && (
               <p className="text-xs text-muted-foreground">
-                Showing <span className="text-amber-400 font-medium">{filtered.length}</span> of {allItems.length} todos
+                Showing <span className="text-primary font-medium">{filtered.length}</span> of {allItems.length} todos
               </p>
             )}
 

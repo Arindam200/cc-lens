@@ -11,6 +11,15 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: packageRoot,
   },
+  experimental: {
+    optimizePackageImports: [
+      'lucide-react',
+      'recharts',
+      'radix-ui',
+      'date-fns',
+      'react-day-picker',
+    ],
+  },
 };
 
 export default nextConfig;

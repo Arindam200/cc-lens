@@ -26,10 +26,10 @@ function TokenBreakdown({ turn }: { turn: ReplayTurn }) {
   if (!turn.usage) return null
   const u = turn.usage
   const items = [
-    u.input_tokens       ? { label: 'In',     value: u.input_tokens,       color: 'var(--viz-sky)' } : null,
-    u.output_tokens      ? { label: 'Out',    value: u.output_tokens,      color: '#d97706' } : null,
-    u.cache_creation_input_tokens ? { label: 'cW', value: u.cache_creation_input_tokens, color: '#a78bfa' } : null,
-    u.cache_read_input_tokens     ? { label: 'cR', value: u.cache_read_input_tokens,     color: '#34d399' } : null,
+    u.input_tokens                ? { label: 'In',  value: u.input_tokens,                color: 'var(--muted-foreground)' } : null,
+    u.output_tokens               ? { label: 'Out', value: u.output_tokens,               color: 'var(--primary)' } : null,
+    u.cache_creation_input_tokens ? { label: 'cW',  value: u.cache_creation_input_tokens, color: 'var(--muted-foreground)' } : null,
+    u.cache_read_input_tokens     ? { label: 'cR',  value: u.cache_read_input_tokens,     color: 'var(--success)' } : null,
   ].filter(Boolean) as { label: string; value: number; color: string }[]
 
   if (items.length === 0) return null
@@ -40,14 +40,14 @@ function TokenBreakdown({ turn }: { turn: ReplayTurn }) {
       {items.map(({ label, value, color }) => (
         <span
           key={label}
-          className="text-[11px] font-mono px-1.5 py-0.5 rounded border border-border/50 bg-muted/50"
+          className="text-[10px] font-mono px-1.5 py-0.5 rounded-[4px] border border-border/60 bg-secondary tabular-nums tracking-wide"
           style={{ color }}
         >
           {label}:{formatTokens(value)}
         </span>
       ))}
       {turn.estimated_cost ? (
-        <span className="text-[11px] font-mono text-[#d97706] px-1 py-0.5">
+        <span className="text-[10px] font-mono text-primary px-1 py-0.5 tabular-nums">
           {formatCost(turn.estimated_cost)}
         </span>
       ) : null}
@@ -62,14 +62,14 @@ export function UserTurnCard({ turn, compactionBefore, toolResults }: TurnCardPr
 
       <div className="mb-5 flex flex-col items-end gap-1.5">
         {/* Timestamp label */}
-        <span className="text-[11px] text-muted-foreground/40 pr-1">
+        <span className="text-[10px] font-mono text-muted-foreground/40 pr-1 tabular-nums">
           {new Date(turn.timestamp).toLocaleTimeString()}
         </span>
 
         {/* User bubble (right-aligned) */}
         {turn.text && (
-          <div className="max-w-[85%] bg-primary/10 border border-primary/20 rounded-2xl rounded-tr-sm px-4 py-3">
-            <p className="text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed">
+          <div className="max-w-[85%] bg-[var(--primary-soft)] border border-[rgba(99,102,241,0.30)] rounded-lg rounded-tr-sm px-4 py-3">
+            <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
               {turn.text}
             </p>
           </div>
@@ -109,17 +109,15 @@ export function AssistantTurnCard({ turn, turnNumber, toolResults }: TurnCardPro
       {/* Header row */}
       <div className="flex items-center gap-2 flex-wrap">
         <div className="flex items-center gap-1.5">
-          <div className="w-6 h-6 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center shrink-0">
-            <span className="text-[10px] font-bold text-primary">C</span>
+          <div className="w-6 h-6 rounded-[4px] bg-[var(--primary-soft)] border border-[rgba(99,102,241,0.30)] flex items-center justify-center shrink-0">
+            <span className="text-[10px] font-mono font-bold text-primary">C</span>
           </div>
-          <span className="text-xs font-semibold text-primary/80">Claude</span>
+          <span className="text-xs font-medium text-primary tracking-[-0.01em]">Claude</span>
         </div>
-        <Badge variant="outline" className="text-[11px] px-1.5 py-0 h-5 font-mono">
-          {modelShort}
-        </Badge>
-        <span className="text-[11px] text-muted-foreground/30">#{turnNumber}</span>
+        <Badge variant="tag">{modelShort}</Badge>
+        <span className="text-[10px] font-mono text-muted-foreground/40 tabular-nums">#{turnNumber}</span>
         {turn.turn_duration_ms && (
-          <span className="text-[11px] text-muted-foreground/40 flex items-center gap-1">
+          <span className="text-[10px] font-mono text-muted-foreground/40 flex items-center gap-1 tabular-nums">
             <Clock className="w-3 h-3" />
             {formatDurationMs(turn.turn_duration_ms)}
           </span>
@@ -133,7 +131,7 @@ export function AssistantTurnCard({ turn, turnNumber, toolResults }: TurnCardPro
             type="button"
             variant="ghost"
             size="sm"
-            className="h-auto gap-1.5 px-2 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-500/10 hover:text-indigo-900 dark:text-indigo-400/90 dark:hover:text-indigo-300"
+            className="h-auto gap-1.5 px-2 py-1.5 text-xs font-medium text-primary hover:bg-[var(--primary-soft)] hover:text-primary"
             onClick={() => setThinkingOpen(o => !o)}
           >
             <Brain className="h-3.5 w-3.5 shrink-0" />
@@ -143,11 +141,11 @@ export function AssistantTurnCard({ turn, turnNumber, toolResults }: TurnCardPro
             />
           </Button>
           {thinkingOpen && turn.thinking_text && (
-            <div className="mt-1 bg-indigo-50 border border-indigo-200/80 rounded-xl px-4 py-3 dark:bg-indigo-950/20 dark:border-indigo-800/25">
-              <pre className="text-xs text-indigo-950/90 whitespace-pre-wrap max-h-56 overflow-auto leading-relaxed dark:text-indigo-200/50">
+            <div className="mt-1 bg-[var(--primary-soft)] border border-[rgba(99,102,241,0.20)] rounded-lg px-4 py-3">
+              <pre className="text-xs text-foreground/80 whitespace-pre-wrap max-h-56 overflow-auto leading-relaxed">
                 {turn.thinking_text.slice(0, 3000)}
                 {turn.thinking_text.length > 3000 && (
-                  <span className="text-indigo-400/40"> …[{(turn.thinking_text.length - 3000).toLocaleString()} more chars]</span>
+                  <span className="text-primary/50"> …[{(turn.thinking_text.length - 3000).toLocaleString()} more chars]</span>
                 )}
               </pre>
             </div>
@@ -171,7 +169,7 @@ export function AssistantTurnCard({ turn, turnNumber, toolResults }: TurnCardPro
       {/* Response text bubble */}
       {textToShow && (
         <div className="ml-8">
-          <div className="rounded-2xl rounded-tl-sm border border-border/60 bg-card px-4 py-3">
+          <div className="rounded-lg rounded-tl-sm border border-border bg-card px-4 py-3">
             <div
               className={cn(
                 'relative',

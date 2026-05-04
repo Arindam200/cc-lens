@@ -12,7 +12,7 @@ export default function SessionsPage() {
   const { data, error, isLoading } = useSWR<{ sessions: SessionWithFacet[]; total: number }>(
     '/api/sessions',
     fetcher,
-    { refreshInterval: 5_000 }
+    { refreshInterval: 60_000 }
   )
 
   return (

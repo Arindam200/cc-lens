@@ -3,17 +3,29 @@
 import { BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell, ResponsiveContainer } from 'recharts'
 import { formatCost } from '@/lib/decode'
 import type { ProjectCost } from '@/types/claude'
+import { getChartPalette } from '@/lib/chart-palette'
+import { useTheme } from '@/components/theme-provider'
 
 interface Props {
   projects: ProjectCost[]
 }
 
 export function CostByProjectChart({ projects }: Props) {
+  const { theme } = useTheme()
+  const palette = getChartPalette(theme)
   const top = projects.slice(0, 12)
+
+  // Indigo gradient: highest = full primary, decay by opacity for following rows
+  const fillFor = (i: number) => {
+    if (i === 0) return palette.primary
+    const alpha = Math.max(20, 88 - i * 6)
+    const a = alpha.toString(16).padStart(2, '0')
+    return palette.primary + a
+  }
 
   return (
     <div>
-      <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-3">Cost by Project</h3>
+      <h3 className="font-mono text-[11px] font-medium text-muted-foreground uppercase tracking-[0.14em] mb-3">Cost by Project</h3>
       <ResponsiveContainer width="100%" height={Math.max(120, top.length * 40)}>
         <BarChart data={top} layout="vertical" margin={{ top: 4, right: 64, bottom: 4, left: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
@@ -35,12 +47,12 @@ export function CostByProjectChart({ projects }: Props) {
             tickFormatter={(v: string) => v.length > 18 ? v.slice(0, 16) + '…' : v}
           />
           <Tooltip
-            contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 4, fontSize: 12 }}
+            contentStyle={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}
             formatter={(val: number | undefined) => [formatCost(val ?? 0), 'Estimated cost']}
           />
           <Bar dataKey="estimated_cost" radius={[0, 3, 3, 0]}>
             {top.map((_, i) => (
-              <Cell key={i} fill={i === 0 ? '#d97706' : '#d97706' + Math.max(30, 100 - i * 7).toString(16)} />
+              <Cell key={i} fill={fillFor(i)} />
             ))}
           </Bar>
         </BarChart>

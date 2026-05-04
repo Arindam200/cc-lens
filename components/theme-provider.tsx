@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 
 type Theme = 'dark' | 'light'
 
@@ -26,17 +26,26 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     document.documentElement.classList.toggle('dark', next === 'dark')
   }, [])
 
-  function toggle() {
+  const toggle = useCallback(() => {
+    const root = document.documentElement
+    root.classList.add('is-theme-switching')
     setTheme(prev => {
       const next: Theme = prev === 'dark' ? 'light' : 'dark'
       localStorage.setItem('theme', next)
-      document.documentElement.classList.toggle('dark', next === 'dark')
+      root.classList.toggle('dark', next === 'dark')
       return next
     })
-  }
+    window.setTimeout(() => {
+      root.classList.remove('is-theme-switching')
+    }, 480)
+  }, [])
+
+  // Memoise the context value so consumers (every chart re-rendered through useTheme)
+  // don't re-render on unrelated provider re-renders.
+  const value = useMemo(() => ({ theme, toggle }), [theme, toggle])
 
   return (
-    <ThemeContext.Provider value={{ theme, toggle }}>
+    <ThemeContext.Provider value={value}>
       {children}
     </ThemeContext.Provider>
   )

@@ -12,12 +12,12 @@ const fetcher = (url: string) =>
 // ── Type config ───────────────────────────────────────────────────────────────
 
 const TYPE_META: Record<MemoryType, { label: string; color: string; bg: string; border: string; dot: string }> = {
-  user:      { label: 'user',      color: 'text-blue-700 dark:text-blue-400', bg: 'bg-blue-700/10 dark:bg-blue-400/10', border: 'border-blue-700/30 dark:border-blue-400/30', dot: 'var(--viz-sky)' },
-  feedback:  { label: 'feedback',  color: 'text-[#f87171]', bg: 'bg-[#f87171]/10', border: 'border-[#f87171]/30', dot: '#f87171' },
-  project:   { label: 'project',   color: 'text-[#a78bfa]', bg: 'bg-[#a78bfa]/10', border: 'border-[#a78bfa]/30', dot: '#a78bfa' },
-  reference: { label: 'reference', color: 'text-[#34d399]', bg: 'bg-[#34d399]/10', border: 'border-[#34d399]/30', dot: '#34d399' },
-  index:     { label: 'index',     color: 'text-[#fbbf24]', bg: 'bg-[#fbbf24]/10', border: 'border-[#fbbf24]/30', dot: '#fbbf24' },
-  unknown:   { label: '?',         color: 'text-muted-foreground', bg: 'bg-muted', border: 'border-border', dot: '#94a3b8' },
+  user:      { label: 'user',      color: 'text-primary',          bg: 'bg-[var(--primary-soft)]',           border: 'border-[rgba(99,102,241,0.30)]', dot: '#6366F1' },
+  feedback:  { label: 'feedback',  color: 'text-[var(--error)]',   bg: 'bg-[rgba(239,68,68,0.10)]',          border: 'border-[rgba(239,68,68,0.30)]',  dot: '#EF4444' },
+  project:   { label: 'project',   color: 'text-foreground',       bg: 'bg-[var(--surface-2)]',              border: 'border-border-strong',           dot: '#6B7280' },
+  reference: { label: 'reference', color: 'text-[var(--success)]', bg: 'bg-[rgba(34,197,94,0.10)]',          border: 'border-[rgba(34,197,94,0.30)]',  dot: '#22C55E' },
+  index:     { label: 'index',     color: 'text-[var(--warning)]', bg: 'bg-[rgba(224,179,65,0.10)]',         border: 'border-[rgba(224,179,65,0.28)]', dot: '#E0B341' },
+  unknown:   { label: '?',         color: 'text-muted-foreground', bg: 'bg-muted',                            border: 'border-border',                  dot: '#9CA3AF' },
 }
 
 const FILTER_TYPES = ['all', 'user', 'feedback', 'project', 'reference', 'index'] as const
@@ -37,7 +37,7 @@ function StaleBadge({ mtime }: { mtime: string }) {
   const daysOld = Math.floor((Date.now() - new Date(mtime).getTime()) / 86_400_000)
   if (daysOld < 30) return null
   return (
-    <span className="text-xs font-mono px-1.5 py-0.5 rounded border border-[#f87171]/30 bg-[#f87171]/10 text-[#f87171]">
+    <span className="text-xs font-mono px-1.5 py-0.5 rounded border border-[rgba(239,68,68,0.30)] bg-[rgba(239,68,68,0.10)] text-[var(--error)]">
       stale
     </span>
   )
@@ -159,13 +159,13 @@ function MemoryCard({ entry, onClick, expanded }: { entry: MemoryEntry; onClick:
                 spellCheck={false}
               />
               {saveError && (
-                <p className="text-xs font-mono text-[#f87171]">{saveError}</p>
+                <p className="text-xs font-mono text-[var(--error)]">{saveError}</p>
               )}
               <div className="flex gap-2">
                 <button
                   onClick={handleSave}
                   disabled={saving}
-                  className="px-3 py-1.5 text-xs font-mono rounded border border-[#34d399]/50 text-[#34d399] bg-[#34d399]/10 hover:bg-[#34d399]/20 disabled:opacity-50 transition-colors"
+                  className="px-3 py-1.5 text-xs font-mono rounded-md border border-[rgba(34,197,94,0.40)] text-[var(--success)] bg-[rgba(34,197,94,0.08)] hover:bg-[rgba(34,197,94,0.16)] disabled:opacity-50 transition-colors"
                 >
                   {saving ? 'saving…' : 'save'}
                 </button>
@@ -263,7 +263,7 @@ export default function MemoryPage() {
       <TopBar title="claude-code-lens · memory" subtitle="~/.claude/projects/*/memory/" />
       <div className="p-4 md:p-6 space-y-5">
 
-        {error && <p className="text-[#f87171] text-sm font-mono">Error loading memories.</p>}
+        {error && <p className="text-[var(--error)] text-sm font-mono">Error loading memories.</p>}
 
         {isLoading && (
           <div className="space-y-3">
@@ -282,10 +282,10 @@ export default function MemoryPage() {
           <>
             {/* Stat cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <StatCard value={memories.length}  label="total memories" color="#fbbf24" />
-              <StatCard value={projectCount}     label="projects"       color="var(--viz-sky)" />
-              <StatCard value={counts.feedback ?? 0} label="feedback"   color="#f87171" />
-              <StatCard value={staleCount}        label="stale (>30d)"  color="#94a3b8" />
+              <StatCard value={memories.length}  label="total memories" color="var(--warning)" />
+              <StatCard value={projectCount}     label="projects"       color="var(--primary)" />
+              <StatCard value={counts.feedback ?? 0} label="feedback"   color="var(--error)" />
+              <StatCard value={staleCount}        label="stale (>30d)"  color="var(--muted-foreground)" />
             </div>
 
             {/* Type filter tabs */}

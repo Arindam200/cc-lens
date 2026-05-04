@@ -59,7 +59,7 @@ function StatTile({
 }
 
 export default function ActivityPage() {
-  const { data, error, isLoading } = useSWR<ActivityData>('/api/activity', fetcher, { refreshInterval: 5_000 })
+  const { data, error, isLoading } = useSWR<ActivityData>('/api/activity', fetcher, { refreshInterval: 60_000 })
 
   const hourCounts = data
     ? Object.fromEntries(data.hour_counts.map(h => [String(h.hour), h.count]))

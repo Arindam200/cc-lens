@@ -105,7 +105,7 @@ function InlineMarkdown({ text }: { text: string }) {
           return (
             <code
               key={i}
-              className="text-emerald-800 dark:text-emerald-300 bg-emerald-950/10 dark:bg-emerald-950/40 px-1 py-0.5 rounded text-xs font-mono"
+              className="text-foreground bg-[var(--surface-2)] border border-border px-1.5 py-0.5 rounded-[4px] text-xs font-mono"
             >
               {p.slice(1, -1)}
             </code>

@@ -50,21 +50,22 @@ export function TopBar({ title, subtitle, className }: TopBarProps) {
 
   return (
     <header
+      data-glass="sticky"
       className={cn(
-        'sticky top-0 z-30 flex items-center justify-between gap-4 border-b border-border/60 bg-background/90 py-3 backdrop-blur-md px-4 md:px-6',
+        'sticky top-0 z-30 flex items-center justify-between gap-4 py-3 px-4 md:px-6',
         className
       )}
     >
       {/* Left: title + subtitle */}
       <div className="min-w-0">
-        <h1 className="text-base font-semibold text-foreground truncate">{title}</h1>
+        <h1 className="text-[15px] font-medium tracking-[-0.015em] text-foreground truncate">{title}</h1>
         {subtitle && (
-          <p className="text-xs text-muted-foreground truncate" suppressHydrationWarning>
+          <p className="text-xs font-mono text-muted-foreground truncate tracking-wide" suppressHydrationWarning>
             {subtitle}{now ? ` · ${now}` : ''}
           </p>
         )}
         {!subtitle && now && (
-          <p className="text-xs text-muted-foreground" suppressHydrationWarning>{now}</p>
+          <p className="text-xs font-mono text-muted-foreground tracking-wide" suppressHydrationWarning>{now}</p>
         )}
       </div>
 
@@ -89,7 +90,7 @@ export function TopBar({ title, subtitle, className }: TopBarProps) {
         >
           <Search className="w-3.5 h-3.5" />
           Search
-          <kbd className="ml-1 text-[10px] text-muted-foreground/50 border border-border rounded px-1 font-sans">⌘K</kbd>
+          <kbd className="ml-1 text-[10px] text-muted-foreground/60 border border-border rounded-[4px] px-1.5 py-0.5 font-mono tracking-wide">⌘K</kbd>
         </Button>
 
         {/* Search — mobile icon only */}

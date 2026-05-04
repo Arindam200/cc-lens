@@ -81,7 +81,7 @@ export function ToolCallBadge({ tool, result }: { tool: ToolCall; result?: { con
           </span>
           {arg ? <span className="truncate text-muted-foreground">{arg}</span> : null}
           {result?.is_error ? (
-            <span className="shrink-0 rounded border border-red-500/30 bg-red-500/10 px-1.5 py-0 text-[10px] font-semibold uppercase tracking-wide text-red-400">
+            <span className="shrink-0 rounded-[4px] border border-[rgba(239,68,68,0.30)] bg-[rgba(239,68,68,0.10)] px-1.5 py-0 text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-[var(--error)]">
               Error
             </span>
           ) : null}
@@ -102,8 +102,8 @@ export function ToolCallBadge({ tool, result }: { tool: ToolCall; result?: { con
             <div>
               <p
                 className={cn(
-                  'mb-1 text-[11px] font-medium uppercase tracking-wide',
-                  result.is_error ? 'text-red-400' : 'text-muted-foreground/70'
+                  'mb-1 font-mono text-[11px] font-medium uppercase tracking-[0.14em]',
+                  result.is_error ? 'text-[var(--error)]' : 'text-muted-foreground/70'
                 )}
               >
                 {result.is_error ? 'Error' : 'Result'}
@@ -112,7 +112,7 @@ export function ToolCallBadge({ tool, result }: { tool: ToolCall; result?: { con
                 className={cn(
                   'max-h-32 overflow-auto whitespace-pre-wrap break-all rounded-md border p-2 text-xs',
                   result.is_error
-                    ? 'border-red-500/25 bg-red-950/20 text-red-200/90'
+                    ? 'border-[rgba(239,68,68,0.25)] bg-[rgba(239,68,68,0.06)] text-[var(--error)]'
                     : 'border-border/50 bg-background/80 text-muted-foreground'
                 )}
               >

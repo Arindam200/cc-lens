@@ -46,9 +46,9 @@ export function TokenAccumulationChart({ turns, compactions }: Props) {
   if (data.length === 0) return null
 
   return (
-    <div className="border border-border rounded bg-card p-4">
-      <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-widest mb-3">
-        📈 Token Accumulation per Turn
+    <div className="border border-border rounded-lg bg-card p-4">
+      <h3 className="font-mono text-[11px] font-medium text-muted-foreground uppercase tracking-[0.14em] mb-3">
+        Token Accumulation per Turn
       </h3>
       <ResponsiveContainer width="100%" height={180}>
         <LineChart data={data} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
@@ -68,7 +68,7 @@ export function TokenAccumulationChart({ turns, compactions }: Props) {
             width={48}
           />
           <Tooltip
-            contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 4, fontSize: 12 }}
+            contentStyle={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}
             formatter={(val: number | undefined, name?: string) => [
               name === 'tokens' ? formatTokens(val ?? 0) : formatCost(val ?? 0),
               name === 'tokens' ? 'Context tokens' : 'Cumulative cost',
@@ -78,7 +78,7 @@ export function TokenAccumulationChart({ turns, compactions }: Props) {
             <ReferenceLine
               key={idx}
               x={idx}
-              stroke="#f59e0b"
+              stroke="#E0B341"
               strokeDasharray="4 2"
               label={{ value: '⚡', position: 'top', fontSize: 12 }}
             />
@@ -86,7 +86,7 @@ export function TokenAccumulationChart({ turns, compactions }: Props) {
           <Line
             type="monotone"
             dataKey="tokens"
-            stroke="var(--viz-sky)"
+            stroke="#6366F1"
             strokeWidth={1.5}
             dot={false}
             activeDot={{ r: 3 }}

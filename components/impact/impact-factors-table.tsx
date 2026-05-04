@@ -15,7 +15,7 @@ export function ImpactFactorsTable() {
     <div className="space-y-6">
       {/* Energy per token table */}
       <div>
-        <h4 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">Énergie par token (baseline Sonnet, avant PUE)</h4>
+        <h4 className="font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground mb-2">Énergie par token (baseline Sonnet, avant PUE)</h4>
         <Table>
           <TableHeader>
             <TableRow>
@@ -40,7 +40,7 @@ export function ImpactFactorsTable() {
 
       {/* Model multipliers */}
       <div>
-        <h4 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">Multiplicateur par taille de modèle</h4>
+        <h4 className="font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground mb-2">Multiplicateur par taille de modèle</h4>
         <Table>
           <TableHeader>
             <TableRow>
@@ -71,7 +71,7 @@ export function ImpactFactorsTable() {
 
       {/* Infrastructure */}
       <div>
-        <h4 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">Facteurs d'infrastructure</h4>
+        <h4 className="font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground mb-2">Facteurs d'infrastructure</h4>
         <Table>
           <TableHeader>
             <TableRow>
@@ -111,8 +111,8 @@ export function ImpactFactorsTable() {
       </div>
 
       {/* Caveats */}
-      <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-4 text-xs space-y-2">
-        <p className="font-semibold text-amber-600 dark:text-amber-400">⚠ Limites de ces estimations</p>
+      <div className="rounded-md border border-[rgba(224,179,65,0.3)] bg-[rgba(224,179,65,0.06)] p-4 text-xs space-y-2">
+        <p className="font-semibold text-[var(--warning)]">⚠ Limites de ces estimations</p>
         <ul className="list-disc list-inside space-y-1 text-muted-foreground">
           <li><strong className="text-foreground">Inference uniquement.</strong> L'entraînement n'est pas inclus — Anthropic ne publie pas ces données.</li>
           <li><strong className="text-foreground">Précision ±30-50 %</strong> selon les modèles et l'usage réel (cf. barres d'erreur Jegham et al.).</li>
@@ -123,22 +123,22 @@ export function ImpactFactorsTable() {
 
       {/* Sources */}
       <div>
-        <h4 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">Sources</h4>
+        <h4 className="font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground mb-2">Sources</h4>
         <ul className="text-xs space-y-1.5">
           <li>
-            <a href="https://epoch.ai/gradient-updates/how-much-energy-does-chatgpt-use" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">
+            <a href="https://epoch.ai/gradient-updates/how-much-energy-does-chatgpt-use" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
               Epoch AI — How much energy does ChatGPT use?
             </a>
             <span className="text-muted-foreground"> · baseline Wh/query, hypothèses H100</span>
           </li>
           <li>
-            <a href="https://simonpcouch.com/blog/2026-01-20-cc-impact/" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">
+            <a href="https://simonpcouch.com/blog/2026-01-20-cc-impact/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
               Simon P. Couch — Electricity use of AI coding agents
             </a>
             <span className="text-muted-foreground"> · décomposition Wh/token par type (input, output, cache)</span>
           </li>
           <li>
-            <a href="https://arxiv.org/html/2505.09598v1" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">
+            <a href="https://arxiv.org/html/2505.09598v1" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
               Jegham et al. — How Hungry is AI? (arXiv 2505.09598)
             </a>
             <span className="text-muted-foreground"> · benchmark énergie/eau/CO₂ par modèle, incluant Claude 3.7 Sonnet</span>

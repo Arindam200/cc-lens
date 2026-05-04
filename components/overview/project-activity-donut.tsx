@@ -10,20 +10,12 @@ import {
 } from 'recharts'
 import type { ProjectSummary } from '@/types/claude'
 import { formatTokens } from '@/lib/decode'
+import { getChartSeries } from '@/lib/chart-palette'
+import { useTheme } from '@/components/theme-provider'
 
 interface Props {
   projects: ProjectSummary[]
 }
-
-/** Solid hex only — Recharts SVG `fill` does not resolve `var(--*)` reliably (shows as black). */
-const PROJECT_COLORS = [
-  '#d97706',
-  '#16a34a',
-  '#2563eb',
-  '#ea580c',
-  '#34d399',
-  '#64748b',
-]
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function CustomTooltip({ active, payload }: any) {
@@ -38,6 +30,8 @@ function CustomTooltip({ active, payload }: any) {
 }
 
 export function ProjectActivityDonut({ projects }: Props) {
+  const { theme } = useTheme()
+  const series = getChartSeries(theme)
   const totalTokens = projects.reduce(
     (s, p) => s + (p.input_tokens ?? 0) + (p.output_tokens ?? 0),
     0
@@ -78,7 +72,7 @@ export function ProjectActivityDonut({ projects }: Props) {
           strokeWidth={0}
         >
           {data.map((_, i) => (
-            <Cell key={i} fill={PROJECT_COLORS[i % PROJECT_COLORS.length]} />
+            <Cell key={i} fill={series[i % series.length]} />
           ))}
         </Pie>
         <Tooltip content={<CustomTooltip />} />

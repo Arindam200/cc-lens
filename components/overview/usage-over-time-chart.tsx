@@ -108,17 +108,20 @@ export function UsageOverTimeChart({ data, days = 90, dateFrom, dateTo }: Props)
     )
   }
 
+  const indigo = '#6366F1'
+  const teal = '#14B8A6'
+
   return (
     <ResponsiveContainer width="100%" height={220}>
       <AreaChart data={filtered} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
         <defs>
           <linearGradient id="gradMessages" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%"  stopColor="#d97706" stopOpacity={0.3} />
-            <stop offset="95%" stopColor="#d97706" stopOpacity={0} />
+            <stop offset="5%"  stopColor={indigo} stopOpacity={0.28} />
+            <stop offset="95%" stopColor={indigo} stopOpacity={0} />
           </linearGradient>
           <linearGradient id="gradSessions" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%"  stopColor="#34d399" stopOpacity={0.2} />
-            <stop offset="95%" stopColor="#34d399" stopOpacity={0} />
+            <stop offset="5%"  stopColor={teal} stopOpacity={0.18} />
+            <stop offset="95%" stopColor={teal} stopOpacity={0} />
           </linearGradient>
         </defs>
         <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
@@ -150,20 +153,20 @@ export function UsageOverTimeChart({ data, days = 90, dateFrom, dateTo }: Props)
         <Area
           type="monotone"
           dataKey="messages"
-          stroke="#d97706"
+          stroke={indigo}
           strokeWidth={2}
           fill="url(#gradMessages)"
           dot={false}
-          activeDot={{ r: 3, fill: '#fbbf24' }}
+          activeDot={{ r: 3, fill: indigo }}
         />
         <Area
           type="monotone"
           dataKey="sessions"
-          stroke="#34d399"
+          stroke={teal}
           strokeWidth={1.5}
           fill="url(#gradSessions)"
           dot={false}
-          activeDot={{ r: 3, fill: '#6ee7b7' }}
+          activeDot={{ r: 3, fill: teal }}
         />
       </AreaChart>
     </ResponsiveContainer>

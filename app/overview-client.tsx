@@ -92,13 +92,13 @@ export function OverviewClient() {
   const [pickerOpen, setPickerOpen] = useState(false)
 
   const { data, error, isLoading } = useSWR<ApiResponse>('/api/stats', fetcher, {
-    refreshInterval: 5_000,
+    refreshInterval: 60_000,
   })
   const { data: sessionsData } = useSWR<{ sessions: SessionWithFacet[] }>('/api/sessions', fetcher, {
-    refreshInterval: 5_000,
+    refreshInterval: 60_000,
   })
   const { data: projectsData } = useSWR<{ projects: ProjectSummary[] }>('/api/projects', fetcher, {
-    refreshInterval: 5_000,
+    refreshInterval: 60_000,
   })
 
   const sessions = sessionsData?.sessions ?? []
@@ -152,12 +152,16 @@ export function OverviewClient() {
 
   const { stats, computed } = data
 
-  const inputBlue = theme === 'light' ? '#1d4ed8' : '#60a5fa'
+  // Indigo for the main figure, semantic accents for cache, neutrals for the rest
+  const indigo = theme === 'light' ? '#6366F1' : '#818CF8'
+  const teal   = theme === 'light' ? '#14B8A6' : '#2DD4BF'
+  const success = '#22C55E'
+  const neutralStrong = theme === 'light' ? '#4B5563' : '#9CA0AB'
   const tokenSegs = [
-    { label: 'input',       value: computed.totalInputTokens,      color: inputBlue },
-    { label: 'output',      value: computed.totalOutputTokens,     color: '#d97706' },
-    { label: 'cache read',  value: computed.totalCacheReadTokens,  color: '#34d399' },
-    { label: 'cache write', value: computed.totalCacheWriteTokens, color: '#a78bfa' },
+    { label: 'input',       value: computed.totalInputTokens,      color: neutralStrong },
+    { label: 'output',      value: computed.totalOutputTokens,     color: indigo },
+    { label: 'cache read',  value: computed.totalCacheReadTokens,  color: success },
+    { label: 'cache write', value: computed.totalCacheWriteTokens, color: teal },
   ]
   const totalTokens =
     computed.totalInputTokens +
@@ -240,21 +244,21 @@ export function OverviewClient() {
           description={`${computed.activeDays} active days`}
           trend={computeTrend(stats.dailyActivity, 'messageCount', trendWindow)}
           sparkData={getActivitySpark(stats.dailyActivity, 'messageCount')}
-          accentColor="#d97706"
+          accentColor={indigo}
         />
         <StatCard
           title="Tokens Used"
           value={formatTokens(computed.totalTokens)}
           description={`${formatTokens(computed.totalCacheReadTokens)} from cache · ~¾ word per token`}
           sparkData={getTokenSpark(tokensByDate)}
-          accentColor={inputBlue}
+          accentColor={indigo}
         />
         <StatCard
           title="Estimated Cost"
           value={`$${computed.totalCost.toFixed(2)}`}
           description={`$${computed.totalCacheSavings.toFixed(2)} saved via prompt cache`}
           sparkData={getTokenSpark(tokensByDate)}
-          accentColor="#34d399"
+          accentColor={success}
         />
       </div>
 

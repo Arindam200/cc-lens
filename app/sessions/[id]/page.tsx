@@ -128,7 +128,7 @@ export default function SessionDetailPage({ params }: { params: Promise<{ id: st
               <CardDescription className="flex items-center gap-2">
                 <Coins className="h-4 w-4" /> Tokens
               </CardDescription>
-              <CardTitle className="text-3xl font-bold tabular-nums text-blue-700 dark:text-[#60a5fa]">{formatTokens(totalTokens)}</CardTitle>
+              <CardTitle className="text-3xl font-bold tabular-nums font-mono text-foreground tracking-[-0.02em]">{formatTokens(totalTokens)}</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-xs text-muted-foreground">Input + output + cache</p>
@@ -140,7 +140,7 @@ export default function SessionDetailPage({ params }: { params: Promise<{ id: st
               <CardDescription className="flex items-center gap-2">
                 <DollarSign className="h-4 w-4" /> Cost
               </CardDescription>
-              <CardTitle className="text-3xl font-bold tabular-nums text-[#d97706]">
+              <CardTitle className="text-3xl font-bold tabular-nums font-mono text-primary tracking-[-0.02em]">
                 {formatCost(replay.total_cost ?? 0)}
               </CardTitle>
             </CardHeader>
@@ -166,12 +166,12 @@ export default function SessionDetailPage({ params }: { params: Promise<{ id: st
           )}
 
           {replay.compactions.length > 0 && (
-            <Card className="gap-0 border-amber-500/25">
+            <Card className="gap-0 border-[rgba(224,179,65,0.30)]">
               <CardHeader className="pb-2">
                 <CardDescription className="flex items-center gap-2">
-                  <Zap className="h-4 w-4 text-amber-500" /> Compactions
+                  <Zap className="h-4 w-4 text-[var(--warning)]" /> Compactions
                 </CardDescription>
-                <CardTitle className="text-3xl font-bold tabular-nums text-amber-500">
+                <CardTitle className="text-3xl font-bold tabular-nums font-mono text-[var(--warning)] tracking-[-0.02em]">
                   {replay.compactions.length}
                 </CardTitle>
               </CardHeader>

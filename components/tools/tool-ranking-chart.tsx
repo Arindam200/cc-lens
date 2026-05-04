@@ -13,7 +13,7 @@ export function ToolRankingChart({ tools }: Props) {
 
   return (
     <div>
-      <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-3">
+      <h3 className="font-mono text-[11px] font-medium text-muted-foreground uppercase tracking-[0.14em] mb-3">
         Tool Usage — Ranked by Total Calls
       </h3>
       <ResponsiveContainer width="100%" height={Math.max(200, top.length * 40)}>
@@ -37,7 +37,7 @@ export function ToolRankingChart({ tools }: Props) {
             tickFormatter={(v: string) => v.length > 18 ? v.slice(0, 16) + '…' : v}
           />
           <Tooltip
-            contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 4, fontSize: 11 }}
+            contentStyle={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 11 }}
             formatter={(val: number | undefined, _name?: string, props?: { payload?: { name?: string } }) => [
               (val ?? 0).toLocaleString() + ' calls',
               props?.payload?.name ?? '',

@@ -36,7 +36,7 @@ interface ProjectDetail {
   branches: Array<{ branch: string; turns: number }>
 }
 
-const LANG_CHART_COLORS = ['#d97706', 'var(--viz-sky)', '#34d399', '#a78bfa', '#fbbf24', '#f87171']
+const LANG_CHART_COLORS = ['#6366F1', '#14B8A6', '#9CA3AF', '#6B7280', '#4B5563', '#D1D5DB']
 
 export default function ProjectDetailPage() {
   const params = useParams()
@@ -172,7 +172,7 @@ export default function ProjectDetailPage() {
               <CardDescription className="flex items-center gap-2">
                 <TrendingUp className="w-4 h-4" /> Tokens
               </CardDescription>
-              <CardTitle className="text-3xl font-bold tabular-nums text-blue-700 dark:text-[#60a5fa]">
+              <CardTitle className="text-3xl font-bold tabular-nums font-mono text-foreground tracking-[-0.02em]">
                 {formatTokens(totalTokens)}
               </CardTitle>
             </CardHeader>
@@ -438,8 +438,8 @@ export default function ProjectDetailPage() {
                     return (
                       <div key={branch} className="flex items-center gap-2">
                         <span className="text-xs text-muted-foreground/70 w-24 truncate font-mono">{branch}</span>
-                        <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-                          <div className="h-full rounded-full bg-emerald-500/60" style={{ width: `${width}%` }} />
+                        <div className="flex-1 h-1.5 bg-secondary rounded-full overflow-hidden">
+                          <div className="h-full rounded-full bg-primary/60" style={{ width: `${width}%` }} />
                         </div>
                         <span className="text-xs text-muted-foreground/50 w-16 text-right tabular-nums">{turns} turns</span>
                       </div>

@@ -229,7 +229,7 @@ export default function ExportPage() {
                     </CardDescription>
                     <CardTitle className="text-base font-medium">
                       {preview?.hasStatsCache ? (
-                        <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                        <span className="text-[var(--success)] flex items-center gap-1.5">
                           <CheckCircle2 className="size-5 shrink-0" />
                           Included
                         </span>
@@ -419,7 +419,7 @@ export default function ExportPage() {
                       <dt>New sessions to add</dt>
                       <dd
                         className={`font-mono font-semibold tabular-nums ${
-                          importDiff.new_sessions > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground/60'
+                          importDiff.new_sessions > 0 ? 'text-[var(--success)]' : 'text-muted-foreground/60'
                         }`}
                       >
                         {importDiff.new_sessions}
@@ -433,9 +433,9 @@ export default function ExportPage() {
                     </p>
                   ) : (
                     <div className="space-y-2 pt-1 border-t border-border/60">
-                      <Alert className="border-amber-500/40 bg-amber-500/5">
-                        <AlertTriangle className="h-4 w-4 text-amber-600" />
-                        <AlertDescription className="text-xs text-amber-800 dark:text-amber-200/90">
+                      <Alert className="border-[rgba(224,179,65,0.40)] bg-[rgba(224,179,65,0.06)]">
+                        <AlertTriangle className="h-4 w-4 text-[var(--warning)]" />
+                        <AlertDescription className="text-xs text-[var(--warning)]">
                           Writing merged data to ~/.claude/ is not implemented in this build — this is a preview only.
                         </AlertDescription>
                       </Alert>

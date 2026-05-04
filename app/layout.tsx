@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Geist_Mono, Inter } from 'next/font/google'
+import { Geist, Geist_Mono } from 'next/font/google'
 import './globals.css'
 import { Sidebar } from '@/components/layout/sidebar'
 import { BottomNav } from '@/components/layout/bottom-nav'
@@ -8,13 +8,14 @@ import { KeyboardNavProvider } from '@/components/keyboard-nav-provider'
 import { SidebarProvider } from '@/components/layout/sidebar-context'
 import { ClientLayout } from '@/components/layout/client-layout'
 
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
+const geistSans = Geist({
+  variable: '--font-geist-sans',
   subsets: ['latin'],
+  display: 'swap',
 })
 
-const inter = Inter({
-  variable: '--font-inter',
+const geistMono = Geist_Mono({
+  variable: '--font-geist-mono',
   subsets: ['latin'],
   display: 'swap',
 })
@@ -32,7 +33,7 @@ export default function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('theme');document.documentElement.classList.toggle('dark',t!=='light')}catch(e){}})()` }} />
       </head>
-      <body suppressHydrationWarning className={`${geistMono.variable} ${inter.variable} antialiased`}>
+      <body suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <ThemeProvider>
           <SidebarProvider>
             <div className="flex min-h-screen">

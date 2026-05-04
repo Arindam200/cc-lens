@@ -17,14 +17,21 @@ interface StatCardProps {
   accentColor?: string
 }
 
-/** Recharts sets SVG stroke/fill from strings; `var(--*)` often does not resolve on SVG → black. */
+/**
+ * Recharts paints SVG stroke/fill from string values; `var(--*)` does not resolve on SVG.
+ * Resolve known DA tokens to concrete hex per theme. Unknown values pass through.
+ */
 function resolveChartColor(accentColor: string | undefined, theme: 'light' | 'dark'): string {
-  if (!accentColor) return theme === 'light' ? '#f97316' : '#d97706'
+  const indigo = theme === 'light' ? '#6366F1' : '#818CF8'
+  const fg = theme === 'light' ? '#111111' : '#EDEDED'
+  if (!accentColor) return indigo
   switch (accentColor) {
     case 'var(--viz-sky)':
-      return theme === 'light' ? '#1d4ed8' : '#60a5fa'
+    case 'var(--primary)':
+    case 'var(--chart-1)':
+      return indigo
     case 'var(--foreground)':
-      return theme === 'light' ? '#18181b' : '#e8eaed'
+      return fg
     default:
       return accentColor
   }
@@ -36,13 +43,7 @@ export function StatCard({ title, value, description, trend, sparkData, accentCo
   const hasTrend = trend !== undefined && !isNaN(trend)
   const isUp = hasTrend && trend! >= 0
   const trendColor = hasTrend
-    ? isUp
-      ? theme === 'light'
-        ? '#059669'
-        : '#34d399'
-      : theme === 'light'
-        ? '#dc2626'
-        : '#f87171'
+    ? isUp ? '#22C55E' : '#EF4444'
     : undefined
   const rawSpark = sparkData ?? []
   // Single point does not draw a line in Recharts; duplicate for a flat segment.
@@ -52,24 +53,26 @@ export function StatCard({ title, value, description, trend, sparkData, accentCo
       : rawSpark.map(v => ({ v }))
 
   return (
-    <Card className="gap-3 transition-all duration-200 hover:-translate-y-0.5 cursor-default overflow-visible">
+    <Card className="gap-3 hover:border-primary cursor-default overflow-visible">
       <CardHeader className="pb-0">
-        <CardDescription className="text-sm font-medium">{title}</CardDescription>
-        <div className="flex items-end justify-between mt-1">
+        <CardDescription className="font-mono text-[12px] tracking-[0.14em] uppercase text-muted-foreground">
+          {title}
+        </CardDescription>
+        <div className="flex items-end justify-between mt-2">
           <CardTitle
-            className="text-3xl font-bold tabular-nums leading-none font-mono"
+            className="text-3xl font-semibold tabular-nums leading-none tracking-[-0.02em] font-mono"
             style={{ color: resolvedAccent }}
           >
             {value}
           </CardTitle>
           {hasTrend && (
             <Badge
-              variant="outline"
-              className="gap-1 text-xs font-medium"
+              variant="tag"
+              className="gap-1"
               style={{
                 color: trendColor,
                 borderColor: `${trendColor}40`,
-                backgroundColor: `${trendColor}12`,
+                backgroundColor: `${trendColor}14`,
               }}
             >
               {isUp ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
@@ -78,7 +81,7 @@ export function StatCard({ title, value, description, trend, sparkData, accentCo
           )}
         </div>
         {description && (
-          <CardDescription className="text-xs mt-1">{description}</CardDescription>
+          <CardDescription className="text-xs mt-1.5 text-[var(--subtle-foreground)]">{description}</CardDescription>
         )}
       </CardHeader>
       {chartData.length > 0 && (

@@ -47,12 +47,19 @@
   &::-webkit-scrollbar { display: none; }
 }
 
+/* ─── Tailwind theme bridge ─────────────────────────────────────────────── */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  /* Inter for UI text, Geist Mono for tabular/technical */
-  --font-sans: var(--font-inter), "Inter", system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), "JetBrains Mono", "Fira Code", monospace;
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-subtle-foreground: var(--subtle-foreground);
+  --color-border-strong: var(--border-strong);
+
+  /* Geist for everything, Geist Mono for technical signals */
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", "Fira Code", Menlo, Consolas, monospace;
+
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -82,302 +89,289 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
 
-  /* Claude Code accent colors */
-  --color-claude-terracotta: #d97706;
-  --color-claude-terracotta-light: #e5880a;
-  --color-terminal-orange: #d97706;
-  --color-terminal-green: #34d399;
-  --color-terminal-amber: #f59e0b;
-  --color-terminal-blue: var(--viz-sky, #1d4ed8);
-  --color-terminal-purple: #a78bfa;
-  --color-terminal-red: #f87171;
-  --color-terminal-dim: #9ca3af;
-  --color-terminal-surface: #0f1117;
+  /* Status (data viz + system feedback only) */
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-error: var(--error);
+  --color-neutral: var(--neutral);
+
+  /* Nightshift radii */
+  --radius-tag: 4px;
+  --radius-button: 6px;
+  --radius-card: 8px;
+  --radius-pill: 999px;
+
+  /* Backwards-compat for existing shadcn radius utilities */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+
+  /* Motion — single ease-out, four durations */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* ─── Light theme — Pastel SaaS ──────────────────────────────────────────── */
+/* ─── Light theme — SW Nightshift cream ─────────────────────────────────── */
 :root {
   --radius: 0.5rem;
-  /* Background: soft gradient cream → lavender handled via body CSS below */
-  --background: #f2eef8;
-  --foreground: #1e1b2e;
-  --card: rgba(255, 255, 255, 0.82);
-  --card-foreground: #1e1b2e;
-  --popover: #ffffff;
-  --popover-foreground: #1e1b2e;
-  --primary: #6d28d9;
-  --primary-foreground: #ffffff;
-  --secondary: rgba(120, 80, 200, 0.07);
-  --secondary-foreground: #3b2a6e;
-  --muted: rgba(120, 80, 200, 0.06);
-  /* WCAG AA: #6b6482 on #f2eef8 ≈ 4.6:1 */
-  --muted-foreground: #6b6482;
-  --accent: rgba(120, 80, 200, 0.08);
-  --accent-foreground: #1e1b2e;
-  --destructive: #dc2626;
-  --border: rgba(180, 155, 230, 0.30);
-  --input: rgba(180, 155, 230, 0.20);
-  --ring: #6d28d9;
-  --viz-sky: #2563eb;
-  --viz-tool-read: #2563eb;
-  --viz-tool-write: #6d28d9;
-  --viz-tool-edit: #ea580c;
-  --viz-tool-grep: #db2777;
-  --viz-tool-glob: #0891b2;
-  --viz-tool-file-io: #4338ca;
-  --viz-tool-shell: #d97706;
-  --viz-tool-agent: #7c3aed;
-  --viz-tool-web: #059669;
-  --viz-tool-planning: #b45309;
-  --viz-tool-todo: #e11d48;
-  --viz-tool-skill: #0e7490;
-  --viz-tool-mcp: #047857;
-  --viz-tool-other: #64748b;
-  --chart-1: #6d28d9;
-  --chart-2: #059669;
-  --chart-3: var(--viz-sky);
-  --chart-4: #db2777;
-  --chart-5: #d97706;
-  --sidebar: rgba(255, 255, 255, 0.72);
-  --sidebar-foreground: #2e2650;
-  --sidebar-primary: #6d28d9;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: rgba(109, 40, 217, 0.08);
-  --sidebar-accent-foreground: #1e1b2e;
-  --sidebar-border: rgba(180, 155, 230, 0.28);
-  --sidebar-ring: #6d28d9;
+  --background: #F8F7F4;
+  --foreground: #111111;
+  --surface: #FFFFFF;
+  --surface-2: #F2F0EB;
+  --card: #FFFFFF;
+  --card-foreground: #111111;
+  --popover: #FFFFFF;
+  --popover-foreground: #111111;
+
+  /* Single accent — indigo, identical across modes */
+  --primary: #6366F1;
+  --primary-foreground: #FFFFFF;
+  --primary-hover: #4F52D9;
+  --primary-soft: rgba(99, 102, 241, 0.10);
+  --primary-glow: rgba(99, 102, 241, 0.19);
+
+  /* Secondary accent (rare, binary comparisons only) */
+  --secondary-accent: #14B8A6;
+
+  /* shadcn slots mapped onto Nightshift surfaces */
+  --secondary: #F2F0EB;
+  --secondary-foreground: #111111;
+  --muted: #F2F0EB;
+  --muted-foreground: #4B5563;
+  --subtle-foreground: #6B7280;
+  --accent: #F2F0EB;
+  --accent-foreground: #111111;
+
+  --destructive: #EF4444;
+  --destructive-foreground: #FFFFFF;
+
+  --border: #E8E6E1;
+  --border-strong: #D6D3CC;
+  --input: #E8E6E1;
+  --ring: #6366F1;
+
+  /* Status (semantic only) */
+  --success: #22C55E;
+  --warning: #E0B341;
+  --error: #EF4444;
+  --neutral: #6B7280;
+
+  /* Chart palette: indigo + teal + 3 neutrals */
+  --chart-1: #6366F1;
+  --chart-2: #14B8A6;
+  --chart-3: #4B5563;
+  --chart-4: #9CA3AF;
+  --chart-5: #D1D5DB;
+
+  /* Tool colors — collapsed onto chart palette (legacy compat) */
+  --viz-tool-read: var(--chart-1);
+  --viz-tool-write: var(--chart-2);
+  --viz-tool-edit: var(--chart-1);
+  --viz-tool-grep: var(--chart-3);
+  --viz-tool-glob: var(--chart-4);
+  --viz-tool-file-io: var(--chart-2);
+  --viz-tool-shell: var(--chart-3);
+  --viz-tool-agent: var(--chart-1);
+  --viz-tool-web: var(--chart-2);
+  --viz-tool-planning: var(--chart-4);
+  --viz-tool-todo: var(--chart-3);
+  --viz-tool-skill: var(--chart-2);
+  --viz-tool-mcp: var(--chart-2);
+  --viz-tool-other: var(--chart-5);
+  --viz-sky: var(--chart-1);
+
+  /* Code surface */
+  --code-bg: #F2F0EB;
+
+  /* Sidebar */
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: #111111;
+  --sidebar-primary: #6366F1;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: rgba(99, 102, 241, 0.10);
+  --sidebar-accent-foreground: #6366F1;
+  --sidebar-border: #E8E6E1;
+  --sidebar-ring: #6366F1;
+
+  /* Elevation tokens */
+  --shadow-card-rest: 0 1px 2px rgba(17, 17, 17, 0.04);
+  --shadow-card-elevated: 0 1px 2px rgba(17, 17, 17, 0.05), 0 8px 18px -10px rgba(17, 17, 17, 0.10);
+  --shadow-card-hover: 0 0 0 1px rgba(99, 102, 241, 0.10), 0 2px 4px rgba(17, 17, 17, 0.04), 0 16px 36px -16px rgba(17, 17, 17, 0.18);
+  --shadow-focus-ring: 0 0 0 3px rgba(99, 102, 241, 0.35);
 }
 
-/* ─── Dark theme — Warm Glass ────────────────────────────────────────────── */
+/* ─── Dark theme — SW Nightshift (default) ──────────────────────────────── */
 .dark {
-  /* Base — warm dark, lighter than before so glass is visible */
-  --background: #1e1509;
-  --foreground: #f0e8dc;
-  /* Cards: semi-transparent amber tint → glass effect with backdrop-filter */
-  --card: rgba(255, 210, 140, 0.07);
-  --card-foreground: #f0e8dc;
-  --popover: #251a0e;
-  --popover-foreground: #f0e8dc;
-  --primary: #d4844a;
-  --primary-foreground: #1e1509;
-  --secondary: rgba(255, 200, 120, 0.08);
-  --secondary-foreground: #e8d8c0;
-  --muted: rgba(255, 200, 120, 0.06);
-  /* WCAG AA: muted text at ~5.5:1 contrast on dark amber bg */
-  --muted-foreground: #a09080;
-  --accent: rgba(255, 200, 120, 0.10);
-  --accent-foreground: #f0e8dc;
-  --destructive: #f87171;
-  --border: rgba(240, 180, 90, 0.16);
-  --input: rgba(255, 200, 120, 0.08);
-  --ring: #d4844a;
-  --viz-sky: #60a5fa;
-  --viz-tool-read: #60a5fa;
-  --viz-tool-write: #a78bfa;
-  --viz-tool-edit: #fdba74;
-  --viz-tool-grep: #f472b6;
-  --viz-tool-glob: #22d3ee;
-  --viz-tool-file-io: #818cf8;
-  --viz-tool-shell: #fbbf24;
-  --viz-tool-agent: #c4b5fd;
-  --viz-tool-web: #6ee7b7;
-  --viz-tool-planning: #fcd34d;
-  --viz-tool-todo: #fb7185;
-  --viz-tool-skill: #5eead4;
-  --viz-tool-mcp: #86efac;
-  --viz-tool-other: #94a3b8;
-  --chart-1: #d4844a;
-  --chart-2: #34d399;
-  --chart-3: var(--viz-sky);
-  --chart-4: #a78bfa;
-  --chart-5: #fbbf24;
-  /* Sidebar: slightly darker and more opaque than content area */
-  --sidebar: rgba(20, 13, 6, 0.75);
-  --sidebar-foreground: #e8d8c0;
-  --sidebar-primary: #d4844a;
-  --sidebar-primary-foreground: #1e1509;
-  --sidebar-accent: rgba(255, 200, 100, 0.10);
-  --sidebar-accent-foreground: #f0e8dc;
-  --sidebar-border: rgba(220, 160, 80, 0.14);
-  --sidebar-ring: #d4844a;
+  --background: #0F0F13;
+  --foreground: #EDEDED;
+  --surface: #16161C;
+  --surface-2: #1C1C24;
+  --card: #16161C;
+  --card-foreground: #EDEDED;
+  --popover: #1C1C24;
+  --popover-foreground: #EDEDED;
+
+  --primary: #6366F1;
+  --primary-foreground: #FFFFFF;
+  --primary-hover: #4F52D9;
+  --primary-soft: rgba(99, 102, 241, 0.12);
+  --primary-glow: rgba(99, 102, 241, 0.22);
+
+  --secondary-accent: #14B8A6;
+
+  --secondary: #1C1C24;
+  --secondary-foreground: #EDEDED;
+  --muted: #1C1C24;
+  --muted-foreground: #9CA0AB;
+  --subtle-foreground: #6B7280;
+  --accent: #1C1C24;
+  --accent-foreground: #EDEDED;
+
+  --destructive: #EF4444;
+  --destructive-foreground: #FFFFFF;
+
+  --border: #2A2A35;
+  --border-strong: #3A3A48;
+  --input: #2A2A35;
+  --ring: #6366F1;
+
+  --success: #22C55E;
+  --warning: #E0B341;
+  --error: #EF4444;
+  --neutral: #6B7280;
+
+  --chart-1: #818CF8;
+  --chart-2: #2DD4BF;
+  --chart-3: #9CA0AB;
+  --chart-4: #6B7280;
+  --chart-5: #4B5563;
+
+  --viz-tool-read: var(--chart-1);
+  --viz-tool-write: var(--chart-2);
+  --viz-tool-edit: var(--chart-1);
+  --viz-tool-grep: var(--chart-3);
+  --viz-tool-glob: var(--chart-4);
+  --viz-tool-file-io: var(--chart-2);
+  --viz-tool-shell: var(--chart-3);
+  --viz-tool-agent: var(--chart-1);
+  --viz-tool-web: var(--chart-2);
+  --viz-tool-planning: var(--chart-4);
+  --viz-tool-todo: var(--chart-3);
+  --viz-tool-skill: var(--chart-2);
+  --viz-tool-mcp: var(--chart-2);
+  --viz-tool-other: var(--chart-5);
+  --viz-sky: var(--chart-1);
+
+  --code-bg: #1C1C24;
+
+  --sidebar: #0F0F13;
+  --sidebar-foreground: #EDEDED;
+  --sidebar-primary: #6366F1;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: rgba(99, 102, 241, 0.12);
+  --sidebar-accent-foreground: #C7D2FE;
+  --sidebar-border: #2A2A35;
+  --sidebar-ring: #6366F1;
+
+  --shadow-card-rest: none;
+  --shadow-card-elevated: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 8px 24px -12px rgba(0, 0, 0, 0.6);
+  --shadow-card-hover: 0 1px 0 rgba(255, 255, 255, 0.06) inset, 0 0 0 1px rgba(99, 102, 241, 0.30), 0 14px 32px -16px rgba(0, 0, 0, 0.75);
+  --shadow-focus-ring: 0 0 0 3px rgba(99, 102, 241, 0.35);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
-  /* Accessible focus ring — visible on both light and dark */
   *:focus-visible {
-    outline: 2px solid var(--ring);
+    outline: 2px solid var(--primary);
     outline-offset: 2px;
   }
-  body {
-    @apply bg-background text-foreground;
-    /* Inter for UI prose, Geist Mono fallback for technical contexts */
-    font-family: var(--font-inter), "Inter", system-ui, sans-serif;
-    font-size: 16px;
-    line-height: 1.6;
-    -webkit-font-smoothing: antialiased;
+  html, body {
+    background-color: var(--background);
+    color: var(--foreground);
   }
-  /* Tabular numbers always use monospace for alignment */
+  body {
+    font-family: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    text-wrap: pretty;
+  }
+  h1, h2 {
+    text-wrap: balance;
+    letter-spacing: -0.02em;
+  }
+  h1 { letter-spacing: -0.03em; }
+  h3, h4, h5, h6 {
+    text-wrap: balance;
+    letter-spacing: -0.015em;
+  }
+  /* Tabular numbers always use Geist Mono for alignment */
   .tabular-nums, [class~="tabular-nums"] {
-    font-family: var(--font-geist-mono), "JetBrains Mono", monospace;
+    font-family: var(--font-geist-mono), ui-monospace, "SF Mono", "Fira Code", Menlo, Consolas, monospace;
     font-variant-numeric: tabular-nums;
   }
 }
 
-/* ─── Light mode: pastel gradient background ────────────────────────────── */
-html:not(.dark) body {
-  background:
-    radial-gradient(ellipse 60% 50% at 10% 5%,  rgba(249, 168, 212, 0.22) 0%, transparent 60%),
-    radial-gradient(ellipse 50% 45% at 90% 90%, rgba(196, 181, 253, 0.28) 0%, transparent 55%),
-    radial-gradient(ellipse 40% 40% at 55% 50%, rgba(216, 180, 254, 0.15) 0%, transparent 50%),
-    linear-gradient(150deg, #f5eff8 0%, #ede8f8 40%, #eae5f8 70%, #f0ebf8 100%);
-  background-attachment: fixed;
+/* ─── Theme transition (420ms ease-out, color-only) ─────────────────────── */
+/* Scoped to the moment of the toggle via the .is-theme-switching class to avoid
+   slowing down every hover/focus interaction. */
+html.is-theme-switching,
+html.is-theme-switching * {
+  transition:
+    background-color 420ms var(--ease-out),
+    color 420ms var(--ease-out),
+    border-color 420ms var(--ease-out),
+    fill 420ms var(--ease-out),
+    stroke 420ms var(--ease-out) !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  html.is-theme-switching,
+  html.is-theme-switching * {
+    transition: none !important;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
 }
 
-/* ─── Light mode: glass cards ───────────────────────────────────────────── */
-:root:not(.dark) [data-slot="card"] {
-  backdrop-filter: blur(16px) saturate(1.4);
-  -webkit-backdrop-filter: blur(16px) saturate(1.4);
-  border: 1px solid rgba(180, 155, 230, 0.30) !important;
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.80) inset,
-    0 2px 12px rgba(109, 40, 217, 0.06),
-    0 1px 3px rgba(0, 0, 0, 0.04);
-}
-:root:not(.dark) [data-slot="card"]:hover {
-  border-color: rgba(109, 40, 217, 0.22) !important;
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.90) inset,
-    0 8px 32px rgba(109, 40, 217, 0.10),
-    0 1px 3px rgba(0, 0, 0, 0.05);
+/* ─── Sticky top bar — only place glassmorphism is allowed ──────────────── */
+header[data-glass="sticky"] {
+  background: color-mix(in oklab, var(--background) 70%, transparent);
+  backdrop-filter: blur(12px) saturate(1.1);
+  -webkit-backdrop-filter: blur(12px) saturate(1.1);
+  border-bottom: 1px solid var(--border);
 }
 
-/* ─── Light mode: glass sidebar & topbar ────────────────────────────────── */
-html:not(.dark) aside {
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-}
-html:not(.dark) header {
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  background: rgba(255, 255, 255, 0.65) !important;
-  border-bottom: 1px solid rgba(180, 155, 230, 0.25) !important;
-}
-
-/* ─── Dark mode: warm amber gradient background ──────────────────────────── */
-html.dark body {
-  background:
-    radial-gradient(ellipse 65% 55% at 15% 10%, rgba(200, 120, 40, 0.28) 0%, transparent 55%),
-    radial-gradient(ellipse 55% 50% at 85% 85%, rgba(160, 80, 25, 0.20) 0%, transparent 55%),
-    radial-gradient(ellipse 40% 40% at 60% 40%, rgba(120, 70, 20, 0.13) 0%, transparent 50%),
-    #1e1509;
-  background-attachment: fixed;
-}
-
-/* ─── Dark mode: subtle dot grid overlay ────────────────────────────────── */
-html.dark body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-  background-image: radial-gradient(rgba(220, 160, 80, 0.11) 1px, transparent 1px);
-  background-size: 26px 26px;
-}
-
-/* ─── Light mode: subtle depth on cards ─────────────────────────────────── */
-:root:not(.dark) [data-slot="card"] {
-  box-shadow:
-    0 1px 2px 0 rgba(24, 24, 27, 0.04),
-    0 4px 16px -2px rgba(249, 115, 22, 0.08),
-    0 0 0 1px rgba(24, 24, 27, 0.05);
-}
-
-/* ─── Dark mode: glass morphism cards ───────────────────────────────────── */
-.dark [data-slot="card"] {
-  backdrop-filter: blur(24px) saturate(1.6);
-  -webkit-backdrop-filter: blur(24px) saturate(1.6);
-  border: 1px solid rgba(240, 180, 90, 0.16) !important;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 235, 170, 0.10),
-    0 4px 24px rgba(0, 0, 0, 0.40),
-    0 1px 4px rgba(0, 0, 0, 0.25);
-}
-.dark [data-slot="card"]:hover {
-  border-color: rgba(240, 180, 90, 0.26) !important;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 235, 170, 0.14),
-    0 8px 40px rgba(0, 0, 0, 0.50),
-    0 0 0 1px rgba(220, 160, 80, 0.18);
-}
-
-/* ─── Dark mode: glass sidebar & topbar ─────────────────────────────────── */
-.dark aside {
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-}
-.dark header {
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-}
-
-/* ─── Dark mode: popover / dropdown glass ───────────────────────────────── */
-.dark [data-slot="popover-content"],
-.dark [data-slot="dropdown-menu-content"],
-.dark [data-slot="select-content"],
-.dark [data-slot="tooltip-content"] {
-  background: rgba(30, 20, 8, 0.90) !important;
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(220, 160, 80, 0.18) !important;
-}
-
-/* ─── Dark mode: input fields ───────────────────────────────────────────── */
-.dark input, .dark textarea, .dark select {
-  background: rgba(255, 200, 120, 0.06);
-  border-color: rgba(240, 180, 90, 0.16);
-}
-.dark input:focus, .dark textarea:focus {
-  border-color: rgba(212, 132, 74, 0.50);
-  box-shadow: 0 0 0 3px rgba(212, 132, 74, 0.15);
-}
-
-/* ─── Scrollbar ──────────────────────────────────────────────────────────── */
+/* ─── Scrollbar ─────────────────────────────────────────────────────────── */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: var(--background);
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--border);
+  background: var(--border-strong);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--muted-foreground);
+  background: var(--subtle-foreground);
 }
 
-/* ─── Terminal glow utilities ────────────────────────────────────────────── */
-.glow-orange {
-  text-shadow: 0 0 10px rgba(217, 119, 6, 0.5);
-}
-.glow-green {
-  text-shadow: 0 0 10px rgba(52, 211, 153, 0.5);
-}
-
-/* ─── Recharts overrides ─────────────────────────────────────────────────── */
+/* ─── Recharts overrides ────────────────────────────────────────────────── */
 .recharts-tooltip-wrapper .recharts-default-tooltip {
-  background: var(--card) !important;
+  background: var(--surface) !important;
   border: 1px solid var(--border) !important;
   border-radius: 8px !important;
-  backdrop-filter: blur(16px) !important;
+  box-shadow: var(--shadow-card-elevated) !important;
 }
 .recharts-cartesian-grid-horizontal line,
 .recharts-cartesian-grid-vertical line {
@@ -385,6 +379,7 @@ html.dark body::before {
 }
 .recharts-text {
   fill: var(--muted-foreground) !important;
-  font-family: var(--font-geist-mono), monospace !important;
-  font-size: 14px !important;
+  font-family: var(--font-mono) !important;
+  font-size: 12px !important;
+  letter-spacing: 0.04em !important;
 }

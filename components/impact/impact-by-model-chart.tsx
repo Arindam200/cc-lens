@@ -3,15 +3,11 @@
 import { BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell, ResponsiveContainer } from 'recharts'
 import { formatEnergy } from '@/lib/impact'
 import type { ModelImpact } from '@/types/claude'
+import { getChartPalette } from '@/lib/chart-palette'
+import { useTheme } from '@/components/theme-provider'
 
 interface Props {
   models: ModelImpact[]
-}
-
-const MODEL_COLORS: Record<string, string> = {
-  opus: '#d97706',
-  sonnet: '#60a5fa',
-  haiku: '#34d399',
 }
 
 function shortModel(m: string): string {
@@ -23,22 +19,25 @@ function shortModel(m: string): string {
   return m
 }
 
-function colorFor(m: string): string {
-  if (/opus/i.test(m)) return MODEL_COLORS.opus
-  if (/sonnet/i.test(m)) return MODEL_COLORS.sonnet
-  if (/haiku/i.test(m)) return MODEL_COLORS.haiku
-  return '#7a8494'
-}
-
 export function ImpactByModelChart({ models }: Props) {
+  const { theme } = useTheme()
+  const palette = getChartPalette(theme)
   const data = models
     .filter(m => m.energy_wh > 0)
     .map(m => ({ name: shortModel(m.model), value: m.energy_wh, raw: m.model }))
     .slice(0, 10)
 
+  // Indigo intensity by model family — Opus full, Sonnet mid, Haiku soft.
+  const colorFor = (m: string): string => {
+    if (/opus/i.test(m)) return palette.primary
+    if (/sonnet/i.test(m)) return palette.primary + 'BB'
+    if (/haiku/i.test(m)) return palette.primary + '80'
+    return palette.neutralMid
+  }
+
   return (
     <div>
-      <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-3">Impact by Model</h3>
+      <h3 className="font-mono text-[11px] font-medium text-muted-foreground uppercase tracking-[0.14em] mb-3">Impact by Model</h3>
       <ResponsiveContainer width="100%" height={Math.max(120, data.length * 40)}>
         <BarChart data={data} layout="vertical" margin={{ top: 4, right: 64, bottom: 4, left: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
@@ -59,7 +58,7 @@ export function ImpactByModelChart({ models }: Props) {
             interval={0}
           />
           <Tooltip
-            contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 4, fontSize: 11 }}
+            contentStyle={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 11 }}
             formatter={(v: number | undefined) => [formatEnergy(v ?? 0), 'Energy']}
           />
           <Bar dataKey="value" radius={[0, 3, 3, 0]}>

@@ -25,7 +25,7 @@ const SORT_OPTIONS: { k: SortKey; label: string }[] = [
 
 export default function ProjectsPage() {
   const { data, error, isLoading } = useSWR<{ projects: ProjectSummary[] }>(
-    '/api/projects', fetcher, { refreshInterval: 5_000 }
+    '/api/projects', fetcher, { refreshInterval: 60_000 }
   )
   const [sort, setSort] = useState<SortKey>('last_active')
   const [search, setSearch] = useState('')

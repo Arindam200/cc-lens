@@ -6,7 +6,7 @@ export default function OverviewPage() {
     <div className="flex flex-col min-h-screen">
       <TopBar
         title="Overview"
-        subtitle="Real-time monitoring · refreshes every 5s"
+        subtitle="Local monitoring · refreshes every 60s"
       />
       <OverviewClient />
     </div>

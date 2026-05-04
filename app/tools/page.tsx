@@ -18,7 +18,7 @@ const fetcher = (url: string) =>
   fetch(url).then(r => { if (!r.ok) throw new Error(`API error ${r.status}`); return r.json() })
 
 export default function ToolsPage() {
-  const { data, error, isLoading } = useSWR<ToolsAnalytics>('/api/tools', fetcher, { refreshInterval: 5_000 })
+  const { data, error, isLoading } = useSWR<ToolsAnalytics>('/api/tools', fetcher, { refreshInterval: 60_000 })
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -50,7 +50,7 @@ export default function ToolsPage() {
                   <CardDescription className="flex items-center gap-2">
                     <Zap className="w-4 h-4" /> Tool Calls
                   </CardDescription>
-                  <CardTitle className="text-3xl font-bold tabular-nums font-mono text-[#d97706]">
+                  <CardTitle className="text-3xl font-bold tabular-nums font-mono text-primary tracking-[-0.02em]">
                     {data.total_tool_calls.toLocaleString()}
                   </CardTitle>
                 </CardHeader>
@@ -78,7 +78,7 @@ export default function ToolsPage() {
                   <CardDescription className="flex items-center gap-2">
                     <Server className="w-4 h-4" /> MCP Servers
                   </CardDescription>
-                  <CardTitle className="text-3xl font-bold tabular-nums font-mono text-[#34d399]">
+                  <CardTitle className="text-3xl font-bold tabular-nums font-mono text-[var(--success)] tracking-[-0.02em]">
                     {data.mcp_servers.length}
                   </CardTitle>
                 </CardHeader>
@@ -92,7 +92,7 @@ export default function ToolsPage() {
                   <CardDescription className="flex items-center gap-2">
                     <AlertTriangle className="w-4 h-4" /> Errors
                   </CardDescription>
-                  <CardTitle className={`text-3xl font-bold tabular-nums font-mono ${data.total_errors > 0 ? 'text-red-400' : 'text-muted-foreground'}`}>
+                  <CardTitle className={`text-3xl font-bold tabular-nums font-mono ${data.total_errors > 0 ? 'text-[var(--error)]' : 'text-muted-foreground'}`}>
                     {data.total_errors}
                   </CardTitle>
                 </CardHeader>
@@ -185,10 +185,10 @@ export default function ToolsPage() {
                       return (
                         <div key={cat} className="flex items-center gap-3">
                           <span className="text-sm text-muted-foreground w-36 truncate">{cat}</span>
-                          <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                            <div className="h-full rounded-full bg-red-400/50" style={{ width: `${width}%` }} />
+                          <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden">
+                            <div className="h-full rounded-full bg-[var(--error)]/55" style={{ width: `${width}%` }} />
                           </div>
-                          <span className="text-sm text-red-400 tabular-nums w-8 text-right">{count}</span>
+                          <span className="text-sm text-[var(--error)] tabular-nums font-mono w-8 text-right">{count}</span>
                         </div>
                       )
                     })}
@@ -230,8 +230,8 @@ export default function ToolsPage() {
                       return (
                         <div key={branch} className="flex items-center gap-3">
                           <span className="text-sm text-muted-foreground w-28 truncate font-mono">{branch}</span>
-                          <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                            <div className="h-full rounded-full bg-[#34d399]/50" style={{ width: `${width}%` }} />
+                          <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden">
+                            <div className="h-full rounded-full bg-primary/55" style={{ width: `${width}%` }} />
                           </div>
                           <span className="text-xs text-muted-foreground tabular-nums w-24 text-right">{turns.toLocaleString()} turns</span>
                         </div>
