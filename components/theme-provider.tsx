@@ -14,17 +14,16 @@ export function useTheme() {
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  // SSR default = 'dark' (matches server render, no hydration mismatch).
+  // The inline <script> in <head> already applied the correct CSS class before
+  // first paint, so there is no visual flash. useEffect then syncs React state.
   const [theme, setTheme] = useState<Theme>('dark')
 
   useEffect(() => {
-    const id = window.setTimeout(() => {
-      const stored = localStorage.getItem('theme')
-      const next: Theme = stored === 'light' ? 'light' : 'dark'
-      setTheme(next)
-      document.documentElement.classList.toggle('dark', next === 'dark')
-    }, 0)
-
-    return () => window.clearTimeout(id)
+    const stored = localStorage.getItem('theme')
+    const next: Theme = stored === 'light' ? 'light' : 'dark'
+    setTheme(next)
+    document.documentElement.classList.toggle('dark', next === 'dark')
   }, [])
 
   function toggle() {

@@ -29,6 +29,9 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('theme');document.documentElement.classList.toggle('dark',t!=='light')}catch(e){}})()` }} />
+      </head>
       <body suppressHydrationWarning className={`${geistMono.variable} ${pressStart2P.variable} antialiased`}>
         <ThemeProvider>
           <SidebarProvider>
