@@ -83,6 +83,7 @@ async function deriveSessionMetaFromJSONL(
   let userCount = 0
   let assistantCount = 0
   const toolCounts: Record<string, number> = {}
+  const skillInvocations: Record<string, number> = {}
   let inputTokens = 0
   let outputTokens = 0
   let cacheRead = 0
@@ -143,6 +144,12 @@ async function deriveSessionMetaFromJSONL(
                 if (item.name.startsWith('mcp__')) hasMcp = true
                 if (item.name === 'WebSearch') hasWebSearch = true
                 if (item.name === 'WebFetch') hasWebFetch = true
+                if (item.name === 'Skill') {
+                  const skillName = (c as { input?: { skill?: unknown } }).input?.skill
+                  if (typeof skillName === 'string' && skillName) {
+                    skillInvocations[skillName] = (skillInvocations[skillName] ?? 0) + 1
+                  }
+                }
               }
             }
           }
@@ -189,6 +196,7 @@ async function deriveSessionMetaFromJSONL(
     files_modified: 0,
     message_hours: messageHours,
     user_message_timestamps: userMessageTimestamps,
+    skill_invocations: skillInvocations,
   }
 }
 

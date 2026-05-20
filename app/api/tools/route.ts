@@ -2,7 +2,7 @@ import path from 'path'
 import { NextResponse } from 'next/server'
 import { getSessions, listProjectSlugs, listProjectJSONLFiles, readJSONLLines } from '@/lib/claude-reader'
 import { categorizeTool, isMcpTool, parseMcpTool } from '@/lib/tool-categories'
-import type { ToolsAnalytics, ToolSummary, McpServerSummary, VersionRecord } from '@/types/claude'
+import type { ToolsAnalytics, ToolSummary, McpServerSummary, VersionRecord, SkillSummary } from '@/types/claude'
 
 export const dynamic = 'force-dynamic'
 
@@ -46,6 +46,42 @@ export async function GET() {
       totalErrors += count
     }
   }
+
+  // ── Skill invocations (slash-command workflows) ────────────────────────────
+  const skillTotals = new Map<string, number>()
+  const skillSessions = new Map<string, Set<string>>()
+  const skillProjects = new Map<string, Set<string>>()
+  const skillFirstSeen = new Map<string, string>()
+  const skillLastSeen = new Map<string, string>()
+  let totalSkillCalls = 0
+
+  for (const s of sessions) {
+    const invs = s.skill_invocations ?? {}
+    for (const [name, count] of Object.entries(invs)) {
+      skillTotals.set(name, (skillTotals.get(name) ?? 0) + count)
+      if (!skillSessions.has(name)) skillSessions.set(name, new Set())
+      skillSessions.get(name)!.add(s.session_id)
+      if (!skillProjects.has(name)) skillProjects.set(name, new Set())
+      if (s.project_path) skillProjects.get(name)!.add(s.project_path)
+      totalSkillCalls += count
+      const ts = s.start_time
+      if (ts) {
+        if (!skillFirstSeen.has(name) || ts < skillFirstSeen.get(name)!) skillFirstSeen.set(name, ts)
+        if (!skillLastSeen.has(name) || ts > skillLastSeen.get(name)!) skillLastSeen.set(name, ts)
+      }
+    }
+  }
+
+  const skills: SkillSummary[] = [...skillTotals.entries()]
+    .map(([name, total_calls]) => ({
+      name,
+      total_calls,
+      session_count: skillSessions.get(name)?.size ?? 0,
+      project_count: skillProjects.get(name)?.size ?? 0,
+      first_seen: skillFirstSeen.get(name) ?? '',
+      last_seen: skillLastSeen.get(name) ?? '',
+    }))
+    .sort((a, b) => b.total_calls - a.total_calls)
 
   // ── Build ToolSummary list ─────────────────────────────────────────────────
   const tools: ToolSummary[] = [...toolTotals.entries()]
@@ -154,6 +190,8 @@ export async function GET() {
     error_categories: errorCategories,
     total_tool_calls: totalToolCalls,
     total_errors: totalErrors,
+    skills,
+    total_skill_calls: totalSkillCalls,
   }
 
   return NextResponse.json(result)

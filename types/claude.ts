@@ -75,6 +75,7 @@ export interface SessionMeta {
   files_modified: number
   message_hours: number[]
   user_message_timestamps: string[]
+  skill_invocations?: Record<string, number>
 }
 
 // ─── Facets ──────────────────────────────────────────────────────────────────
@@ -195,6 +196,8 @@ export interface ProjectSummary {
   uses_mcp: boolean
   uses_task_agent: boolean
   branches: string[]
+  top_skills?: Array<{ name: string; calls: number }>
+  total_skill_calls?: number
 }
 
 // ─── Tool Analytics ───────────────────────────────────────────────────────────
@@ -221,6 +224,15 @@ export interface VersionRecord {
   last_seen: string
 }
 
+export interface SkillSummary {
+  name: string
+  total_calls: number
+  session_count: number
+  project_count: number
+  first_seen: string
+  last_seen: string
+}
+
 export interface ToolsAnalytics {
   tools: ToolSummary[]
   mcp_servers: McpServerSummary[]
@@ -230,6 +242,21 @@ export interface ToolsAnalytics {
   error_categories: Record<string, number>
   total_tool_calls: number
   total_errors: number
+  skills?: SkillSummary[]
+  total_skill_calls?: number
+}
+
+export interface SkillsAnalytics {
+  skills: SkillSummary[]
+  total_skill_calls: number
+  total_sessions_with_skills: number
+  daily: Array<{ date: string; counts: Record<string, number>; total: number }>
+  by_project: Array<{
+    slug: string
+    display_name: string
+    total_calls: number
+    top_skills: Array<{ name: string; calls: number }>
+  }>
 }
 
 // ─── Cost Analytics ───────────────────────────────────────────────────────────

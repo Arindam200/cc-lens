@@ -88,6 +88,19 @@ export async function GET() {
       }
     }
 
+    const skillCounts: Record<string, number> = {}
+    let totalSkillCalls = 0
+    for (const s of sessionList) {
+      for (const [name, count] of Object.entries(s.skill_invocations ?? {})) {
+        skillCounts[name] = (skillCounts[name] ?? 0) + count
+        totalSkillCalls += count
+      }
+    }
+    const topSkills = Object.entries(skillCounts)
+      .map(([name, calls]) => ({ name, calls }))
+      .sort((a, b) => b.calls - a.calls)
+      .slice(0, 5)
+
     const sortedDates = sessionList.map(s => s.start_time).sort()
 
     projects.push({
@@ -112,6 +125,8 @@ export async function GET() {
       uses_mcp: sessionList.some(s => s.uses_mcp),
       uses_task_agent: sessionList.some(s => s.uses_task_agent),
       branches: [...(slugBranches.get(slug) ?? new Set())].slice(0, 10),
+      top_skills: topSkills,
+      total_skill_calls: totalSkillCalls,
     })
   }
 
