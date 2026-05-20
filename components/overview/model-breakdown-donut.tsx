@@ -24,6 +24,7 @@ const MODEL_COLORS = [
 ]
 
 function shortModelName(model: string): string {
+  if (model.includes('opus-4-7'))      return 'Opus 4.7'
   if (model.includes('opus-4-6'))      return 'Opus 4.6'
   if (model.includes('opus-4-5'))      return 'Opus 4.5'
   if (model.includes('sonnet-4-6'))    return 'Sonnet 4.6'

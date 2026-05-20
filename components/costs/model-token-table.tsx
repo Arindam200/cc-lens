@@ -2,6 +2,7 @@ import { formatTokens, formatCost } from '@/lib/decode'
 import type { ModelCostBreakdown } from '@/types/claude'
 
 function shortModel(m: string): string {
+  if (m.includes('opus-4-7'))   return 'claude-opus-4.7'
   if (m.includes('opus-4-6'))   return 'claude-opus-4.6'
   if (m.includes('opus-4-5'))   return 'claude-opus-4.5'
   if (m.includes('sonnet-4-6')) return 'claude-sonnet-4.6'

@@ -49,6 +49,7 @@ export interface SessionMeta {
   session_id: string
   project_path: string
   start_time: string
+  last_activity?: string
   duration_minutes: number
   user_message_count: number
   assistant_message_count: number

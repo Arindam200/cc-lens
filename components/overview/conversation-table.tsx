@@ -43,24 +43,25 @@ export function OverviewConversationTable({ sessions }: Props) {
   }, [])
 
   const filtered = useMemo(() => {
+    const lastActiveMs = (s: SessionWithFacet) =>
+      new Date(s.last_activity ?? s.start_time).getTime()
+
     let result: SessionWithFacet[]
     switch (filter) {
       case 'active':
         result = now === null
           ? sessions
-          : sessions.filter(s => now - new Date(s.start_time).getTime() < ONE_DAY_MS)
+          : sessions.filter(s => now - lastActiveMs(s) < ONE_DAY_MS)
         break
       case 'recent':
         result = now === null
           ? sessions
-          : sessions.filter(s => now - new Date(s.start_time).getTime() < ONE_WEEK_MS)
+          : sessions.filter(s => now - lastActiveMs(s) < ONE_WEEK_MS)
         break
       default:
         result = sessions
     }
-    return result.sort(
-      (a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime(),
-    )
+    return result.sort((a, b) => lastActiveMs(b) - lastActiveMs(a))
   }, [sessions, filter, now])
 
   const displaySessions = filtered.slice(0, 10)
@@ -91,7 +92,8 @@ export function OverviewConversationTable({ sessions }: Props) {
             const totalMsgs = (s.user_message_count ?? 0) + (s.assistant_message_count ?? 0)
             const totalTokens = (s.input_tokens ?? 0) + (s.output_tokens ?? 0)
             const projectName = projectDisplayName(s.project_path ?? '')
-            const isActive = now !== null && now - new Date(s.start_time).getTime() < ONE_DAY_MS
+            const lastActive = s.last_activity ?? s.start_time
+            const isActive = now !== null && now - new Date(lastActive).getTime() < ONE_DAY_MS
 
             return (
               <TableRow key={s.session_id}>
@@ -119,7 +121,7 @@ export function OverviewConversationTable({ sessions }: Props) {
                   {formatTokens(totalTokens)}
                 </TableCell>
                 <TableCell className="text-muted-foreground text-sm">
-                  {formatRelativeDate(s.start_time)}
+                  {formatRelativeDate(lastActive)}
                 </TableCell>
                 <TableCell>
                   {isActive ? (

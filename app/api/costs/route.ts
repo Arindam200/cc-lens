@@ -54,7 +54,7 @@ export async function GET() {
     const pp = s.project_path ?? ''
     const slug = pp
     const existing = projectMap.get(slug) ?? { cost: 0, input: 0, output: 0 }
-    const cost = estimateTotalCostFromModel('claude-opus-4-6', {
+    const cost = estimateTotalCostFromModel('claude-opus-4-7', {
       inputTokens: s.input_tokens ?? 0,
       outputTokens: s.output_tokens ?? 0,
       cacheCreationInputTokens: s.cache_creation_input_tokens ?? 0,

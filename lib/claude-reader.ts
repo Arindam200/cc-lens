@@ -181,6 +181,7 @@ async function parseSessionFile(filePath: string, sessionId: string): Promise<Pa
     session_id: sessionId,
     project_path: cwd ?? '',
     start_time: startTime,
+    last_activity: lastTime || startTime,
     duration_minutes: durationMinutes,
     user_message_count: userCount,
     assistant_message_count: assistantCount,

@@ -15,7 +15,7 @@ function toSessionWithFacet(
   enrich: ParsedSession | undefined,
   facet: Facet | undefined,
 ): SessionWithFacet {
-  const estimated_cost = estimateCostFromUsage('claude-opus-4-6', {
+  const estimated_cost = estimateCostFromUsage('claude-opus-4-7', {
     input_tokens: s.input_tokens ?? 0,
     output_tokens: s.output_tokens ?? 0,
     cache_creation_input_tokens: s.cache_creation_input_tokens ?? 0,

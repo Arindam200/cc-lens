@@ -19,7 +19,7 @@ export async function GET(
     return NextResponse.json({ error: 'Session not found' }, { status: 404 })
   }
 
-  const estimated_cost = estimateCostFromUsage('claude-opus-4-6', {
+  const estimated_cost = estimateCostFromUsage('claude-opus-4-7', {
     input_tokens: resolved.input_tokens ?? 0,
     output_tokens: resolved.output_tokens ?? 0,
     cache_creation_input_tokens: resolved.cache_creation_input_tokens ?? 0,

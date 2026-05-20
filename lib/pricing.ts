@@ -107,7 +107,7 @@ function getPricing(model: string): ModelPricing {
       return table[key]
     }
   }
-  return table['claude-opus-4-6']
+  return table['claude-opus-4-7']
 }
 
 export function estimateCostFromUsage(model: string, usage: TurnUsage): number {
