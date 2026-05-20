@@ -74,6 +74,28 @@ export function toolBarColor(toolName: string): string {
   return TOOL_BAR_OVERRIDES[toolName] ?? CATEGORY_COLORS[categorizeTool(toolName)]
 }
 
+/** Rotating palette of theme tokens for distinguishing items that share a category (e.g. skills). */
+const SKILL_PALETTE = [
+  'var(--viz-tool-skill)',
+  'var(--viz-tool-read)',
+  'var(--viz-tool-edit)',
+  'var(--viz-tool-grep)',
+  'var(--viz-tool-agent)',
+  'var(--viz-tool-web)',
+  'var(--viz-tool-planning)',
+  'var(--viz-tool-todo)',
+  'var(--viz-tool-mcp)',
+  'var(--viz-tool-glob)',
+  'var(--viz-tool-write)',
+  'var(--viz-tool-shell)',
+]
+
+export function skillColor(name: string): string {
+  let h = 0
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0
+  return SKILL_PALETTE[h % SKILL_PALETTE.length]
+}
+
 /**
  * Alpha that works for both hex and `var(--…)` (unlike string concatenation).
  * @param opacityPercent 0–100 portion of the base color

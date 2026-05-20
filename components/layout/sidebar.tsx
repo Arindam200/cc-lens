@@ -6,6 +6,7 @@ import {
   LayoutDashboard, FolderOpen, MessageSquare, DollarSign,
   Wrench, Activity, History, CheckSquare, FileText,
   Brain, Settings, Download, Moon, Sun, PanelLeftClose, PanelLeft,
+  Sparkles,
 } from 'lucide-react'
 import { useTheme } from '@/components/theme-provider'
 import { useSidebar } from '@/components/layout/sidebar-context'
@@ -19,6 +20,7 @@ const NAV = [
   { href: '/sessions', label: 'Sessions',  icon: MessageSquare   },
   { href: '/costs',    label: 'Costs',     icon: DollarSign      },
   { href: '/tools',    label: 'Tools',     icon: Wrench          },
+  { href: '/skills',   label: 'Skills',    icon: Sparkles        },
   { href: '/activity', label: 'Activity',  icon: Activity        },
   { href: '/history',  label: 'History',   icon: History         },
   { href: '/todos',    label: 'Todos',     icon: CheckSquare     },

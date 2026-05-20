@@ -2,6 +2,7 @@ import path from 'path'
 import { NextResponse } from 'next/server'
 import { getSessions, listProjectSlugs, listProjectJSONLFiles, readJSONLLines } from '@/lib/claude-reader'
 import { categorizeTool, isMcpTool, parseMcpTool } from '@/lib/tool-categories'
+import { aggregateSkillInvocations } from '@/lib/skill-analytics'
 import type { ToolsAnalytics, ToolSummary, McpServerSummary, VersionRecord } from '@/types/claude'
 
 export const dynamic = 'force-dynamic'
@@ -46,6 +47,8 @@ export async function GET() {
       totalErrors += count
     }
   }
+
+  const { skills, totalSkillCalls } = aggregateSkillInvocations(sessions)
 
   // ── Build ToolSummary list ─────────────────────────────────────────────────
   const tools: ToolSummary[] = [...toolTotals.entries()]
@@ -154,6 +157,8 @@ export async function GET() {
     error_categories: errorCategories,
     total_tool_calls: totalToolCalls,
     total_errors: totalErrors,
+    skills,
+    total_skill_calls: totalSkillCalls,
   }
 
   return NextResponse.json(result)

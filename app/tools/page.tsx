@@ -12,7 +12,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
-import { AlertTriangle, Wrench, Server, Zap, GitBranch } from 'lucide-react'
+import { AlertTriangle, Wrench, Server, Zap, GitBranch, Sparkles } from 'lucide-react'
+import Link from 'next/link'
+import { SkillRankingPanel } from '@/components/skills/skill-ranking-panel'
 
 const fetcher = (url: string) =>
   fetch(url).then(r => { if (!r.ok) throw new Error(`API error ${r.status}`); return r.json() })
@@ -131,6 +133,26 @@ export default function ToolsPage() {
                 <ToolRankingChart tools={data.tools} />
               </CardContent>
             </Card>
+
+            {/* Skill invocations */}
+            {data.skills && data.skills.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <CardTitle className="flex items-center gap-2"><Sparkles className="w-4 h-4" /> Skill Invocations</CardTitle>
+                      <CardDescription>
+                        Top slash-command workflows · {data.total_skill_calls?.toLocaleString() ?? 0} total calls ·{' '}
+                        <Link href="/skills" className="underline hover:text-foreground">View all</Link>
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <SkillRankingPanel skills={data.skills} limit={10} />
+                </CardContent>
+              </Card>
+            )}
 
             {/* MCP server details */}
             {data.mcp_servers.length > 0 && (
