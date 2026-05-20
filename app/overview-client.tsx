@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import useSWR from 'swr'
 import { BarChart3, PieChart, Clock, CalendarDays } from 'lucide-react'
 import { UsageOverTimeChart } from '@/components/overview/usage-over-time-chart'

@@ -55,7 +55,7 @@ function TokenBreakdown({ turn }: { turn: ReplayTurn }) {
   )
 }
 
-export function UserTurnCard({ turn, compactionBefore, toolResults }: TurnCardProps) {
+export function UserTurnCard({ turn, compactionBefore }: TurnCardProps) {
   return (
     <div>
       {compactionBefore && <CompactionCard event={compactionBefore} />}

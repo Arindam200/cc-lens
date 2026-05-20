@@ -1,4 +1,4 @@
-import { formatCost, formatPct, formatTokens } from '@/lib/decode'
+import { formatCost, formatTokens } from '@/lib/decode'
 import type { ModelCostBreakdown } from '@/types/claude'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 

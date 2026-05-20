@@ -1,0 +1,39 @@
+name: Feature request
+description: Suggest an improvement for Claude Code Lens
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user problem would this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What should cc-lens do?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+    validations:
+      required: false
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy impact
+      options:
+        - label: This feature keeps Claude Code data local by default.
+        - label: This feature may expose, export, sync, or upload local data.
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+    validations:
+      required: false

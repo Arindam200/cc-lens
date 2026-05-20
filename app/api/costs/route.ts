@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { readStatsCache, getSessions } from '@/lib/claude-reader'
-import { estimateTotalCostFromModel, cacheEfficiency, getPricing, PRICING } from '@/lib/pricing'
+import { estimateTotalCostFromModel, cacheEfficiency, getPricing } from '@/lib/pricing'
 import { projectDisplayName } from '@/lib/decode'
 import type { CostAnalytics, ModelCostBreakdown, DailyCost, ProjectCost } from '@/types/claude'
 

@@ -76,6 +76,7 @@ export interface SessionMeta {
   message_hours: number[]
   user_message_timestamps: string[]
   skill_invocations?: Record<string, number>
+  model_usage?: Record<string, ModelUsage>
 }
 
 // ─── Facets ──────────────────────────────────────────────────────────────────

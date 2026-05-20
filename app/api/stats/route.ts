@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { readStatsCache, getSessions, getClaudeStorageBytes } from '@/lib/claude-reader'
 import { estimateTotalCostFromModel, getPricing } from '@/lib/pricing'
-import type { DailyActivity, SessionMeta } from '@/types/claude'
+import type { DailyActivity, ModelUsage, SessionMeta } from '@/types/claude'
 
 export const dynamic = 'force-dynamic'
 
@@ -38,6 +38,40 @@ function mergeDailyActivity(
   return Array.from(map.values()).sort((a, b) => a.date.localeCompare(b.date))
 }
 
+function computeModelUsageFromSessions(sessions: SessionMeta[]): Record<string, ModelUsage> {
+  const byModel: Record<string, ModelUsage> = {}
+
+  for (const session of sessions) {
+    for (const [model, usage] of Object.entries(session.model_usage ?? {})) {
+      const existing = byModel[model] ?? {
+        inputTokens: 0,
+        outputTokens: 0,
+        cacheReadInputTokens: 0,
+        cacheCreationInputTokens: 0,
+        costUSD: 0,
+        webSearchRequests: 0,
+      }
+      existing.inputTokens += usage.inputTokens ?? 0
+      existing.outputTokens += usage.outputTokens ?? 0
+      existing.cacheReadInputTokens += usage.cacheReadInputTokens ?? 0
+      existing.cacheCreationInputTokens += usage.cacheCreationInputTokens ?? 0
+      existing.costUSD += usage.costUSD ?? 0
+      existing.webSearchRequests += usage.webSearchRequests ?? 0
+      byModel[model] = existing
+    }
+  }
+
+  return byModel
+}
+
+function mergeModelUsage(
+  fromStats: Record<string, ModelUsage>,
+  fromSessions: Record<string, ModelUsage>,
+): Record<string, ModelUsage> {
+  if (Object.keys(fromSessions).length === 0) return fromStats
+  return { ...fromStats, ...fromSessions }
+}
+
 export async function GET() {
   const [stats, sessions, storageBytes] = await Promise.all([
     readStatsCache(),
@@ -50,7 +84,8 @@ export async function GET() {
     ? mergeDailyActivity(stats.dailyActivity ?? [], dailyFromSessions)
     : dailyFromSessions
 
-  const modelUsage = stats?.modelUsage ?? {}
+  const sessionModelUsage = computeModelUsageFromSessions(sessions)
+  const modelUsage = mergeModelUsage(stats?.modelUsage ?? {}, sessionModelUsage)
 
   // Compute estimated total cost from modelUsage
   let totalCost = 0
@@ -106,13 +141,13 @@ export async function GET() {
   ).length
 
   const statsOut = stats
-    ? { ...stats, dailyActivity }
+    ? { ...stats, dailyActivity, modelUsage }
     : {
         version: 0,
         lastComputedDate: '',
         dailyActivity,
         tokensByDate: [],
-        modelUsage: {},
+        modelUsage,
         totalSessions: sessions.length,
         totalMessages: sessions.reduce((s, m) => s + (m.user_message_count ?? 0) + (m.assistant_message_count ?? 0), 0),
         longestSession: { sessionId: '', duration: 0, messageCount: 0, timestamp: '' },

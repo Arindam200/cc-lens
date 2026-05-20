@@ -217,7 +217,7 @@ export default function MemoryPage() {
   const [search, setSearch] = useState('')
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
-  const memories = data?.memories ?? []
+  const memories = useMemo(() => data?.memories ?? [], [data?.memories])
 
   const counts = useMemo(() => {
     const c: Record<string, number> = { all: memories.length }
