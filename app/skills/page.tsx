@@ -5,11 +5,11 @@ import Link from 'next/link'
 import { TopBar } from '@/components/layout/top-bar'
 import { SkillRankingPanel } from '@/components/skills/skill-ranking-panel'
 import { SkillTimelineChart } from '@/components/skills/skill-timeline-chart'
+import { CATEGORY_COLORS } from '@/lib/tool-categories'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Badge } from '@/components/ui/badge'
-import { AlertTriangle, Sparkles, Target, FolderOpen } from 'lucide-react'
+import { AlertTriangle, Sparkles, Target, FolderOpen, Activity, TrendingUp } from 'lucide-react'
 import type { SkillsAnalytics } from '@/types/claude'
 
 const fetcher = (url: string) =>
@@ -41,13 +41,14 @@ export default function SkillsPage() {
 
         {data && (
           <>
+            {/* Hero stat cards */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <Card>
                 <CardHeader className="pb-2">
                   <CardDescription className="flex items-center gap-2">
                     <Sparkles className="w-4 h-4" /> Skill Invocations
                   </CardDescription>
-                  <CardTitle className="text-3xl font-bold tabular-nums text-[var(--viz-tool-skill)]">
+                  <CardTitle className="text-3xl font-bold tabular-nums" style={{ color: CATEGORY_COLORS.skill }}>
                     {data.total_skill_calls.toLocaleString()}
                   </CardTitle>
                 </CardHeader>
@@ -72,7 +73,9 @@ export default function SkillsPage() {
 
               <Card>
                 <CardHeader className="pb-2">
-                  <CardDescription>Sessions w/ Skills</CardDescription>
+                  <CardDescription className="flex items-center gap-2">
+                    <Activity className="w-4 h-4" /> Sessions w/ Skills
+                  </CardDescription>
                   <CardTitle className="text-3xl font-bold tabular-nums">
                     {data.total_sessions_with_skills.toLocaleString()}
                   </CardTitle>
@@ -84,8 +87,10 @@ export default function SkillsPage() {
 
               <Card>
                 <CardHeader className="pb-2">
-                  <CardDescription>Top Skill</CardDescription>
-                  <CardTitle className="text-xl font-semibold truncate" title={data.skills[0]?.name}>
+                  <CardDescription className="flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4" /> Top Skill
+                  </CardDescription>
+                  <CardTitle className="text-xl font-semibold truncate font-mono" title={data.skills[0]?.name}>
                     {data.skills[0]?.name ?? '—'}
                   </CardTitle>
                 </CardHeader>
@@ -97,21 +102,33 @@ export default function SkillsPage() {
               </Card>
             </div>
 
+            {/* Skill ranking */}
             <Card>
               <CardHeader>
-                <CardTitle>Skill Frequency</CardTitle>
-                <CardDescription>All skills ranked by total invocations</CardDescription>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <CardTitle>Skill Frequency</CardTitle>
+                    <CardDescription>All skills ranked by total invocations</CardDescription>
+                  </div>
+                  <Sparkles className="w-4 h-4 text-muted-foreground mt-0.5" />
+                </div>
               </CardHeader>
               <CardContent>
                 <SkillRankingPanel skills={data.skills} />
               </CardContent>
             </Card>
 
+            {/* Timeline */}
             {data.daily.length > 0 && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Skill Usage Over Time</CardTitle>
-                  <CardDescription>Total skill invocations per day (bucketed by session start)</CardDescription>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <CardTitle>Skill Usage Over Time</CardTitle>
+                      <CardDescription>Total skill invocations per day (bucketed by session start)</CardDescription>
+                    </div>
+                    <Activity className="w-4 h-4 text-muted-foreground mt-0.5" />
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <SkillTimelineChart daily={data.daily} />
@@ -119,46 +136,71 @@ export default function SkillsPage() {
               </Card>
             )}
 
+            {/* Per project — bar style matching /tools Git Branch Analytics */}
             {data.by_project.length > 0 && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2"><FolderOpen className="w-4 h-4" /> Per Project</CardTitle>
-                  <CardDescription>Which workflows dominate each project</CardDescription>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <CardTitle>Per Project</CardTitle>
+                      <CardDescription>Which workflows dominate each project</CardDescription>
+                    </div>
+                    <FolderOpen className="w-4 h-4 text-muted-foreground mt-0.5" />
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {data.by_project.map(p => (
-                      <div key={p.slug} className="flex items-start justify-between gap-4 py-2 border-b border-border last:border-0">
-                        <div className="min-w-0 flex-1">
-                          <Link
-                            href={`/projects/${p.slug}`}
-                            className="text-sm font-medium hover:underline truncate block"
-                            title={p.display_name}
-                          >
-                            {p.display_name}
-                          </Link>
-                          <div className="flex flex-wrap gap-1.5 mt-1.5">
-                            {p.top_skills.map(s => (
-                              <Badge key={s.name} variant="outline" className="text-xs font-mono">
-                                {s.name} <span className="ml-1 text-muted-foreground">× {s.calls}</span>
-                              </Badge>
+                    {data.by_project.map(p => {
+                      const max = data.by_project[0]?.total_calls ?? 1
+                      const width = Math.max(4, Math.round((p.total_calls / max) * 100))
+                      return (
+                        <div key={p.slug} className="space-y-1.5">
+                          <div className="flex items-center gap-3">
+                            <Link
+                              href={`/projects/${p.slug}`}
+                              className="text-sm font-medium hover:underline truncate flex-1 min-w-0"
+                              title={p.display_name}
+                            >
+                              {p.display_name}
+                            </Link>
+                            <span className="text-xs text-muted-foreground tabular-nums whitespace-nowrap">
+                              {p.total_calls.toLocaleString()} calls
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                              <div
+                                className="h-full rounded-full"
+                                style={{ width: `${width}%`, background: `${CATEGORY_COLORS.skill}80` }}
+                              />
+                            </div>
+                          </div>
+                          <div className="flex flex-wrap gap-1.5 text-xs text-muted-foreground font-mono">
+                            {p.top_skills.map((s, i) => (
+                              <span key={s.name}>
+                                {i > 0 && <span className="mr-1.5 text-border">·</span>}
+                                {s.name} <span className="text-muted-foreground/60">×{s.calls}</span>
+                              </span>
                             ))}
                           </div>
                         </div>
-                        <span className="text-sm tabular-nums text-muted-foreground whitespace-nowrap pt-1">
-                          {p.total_calls.toLocaleString()} calls
-                        </span>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 </CardContent>
               </Card>
             )}
 
+            {/* Detail table */}
             <Card>
               <CardHeader>
-                <CardTitle>Skill Details</CardTitle>
-                <CardDescription>Sessions, projects, first and last seen for each skill</CardDescription>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <CardTitle>Skill Details</CardTitle>
+                    <CardDescription>Sessions, projects, first and last seen for each skill</CardDescription>
+                  </div>
+                  <Target className="w-4 h-4 text-muted-foreground mt-0.5" />
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">

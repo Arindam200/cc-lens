@@ -28,6 +28,7 @@ export function SkillRankingPanel({ skills, limit = 25 }: Props) {
           tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
           tickLine={false}
           axisLine={false}
+          allowDecimals={false}
           tickFormatter={v => v.toLocaleString()}
         />
         <YAxis
