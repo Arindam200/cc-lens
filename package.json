@@ -30,7 +30,7 @@
     "public"
   ],
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --webpack",
     "build": "next build",
     "build:dist": "next build && node bin/prepare-standalone.js",
     "start": "next start",
