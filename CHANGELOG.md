@@ -18,3 +18,4 @@ This project follows a simple changelog format:
 - Privacy documentation describing local files, export behavior, and network expectations.
 - GitHub issue templates for bug reports and feature requests.
 - GitHub Actions CI for lint and production build checks.
+- Roadmap, known limitations, and compatibility documentation for open-source users.

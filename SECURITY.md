@@ -54,7 +54,7 @@ Known write behavior:
 
 - The CLI/runtime may prepare package runtime files outside `~/.claude/` as described in the README.
 - The Memory page can edit memory files through the local API.
-- Export creates a downloaded `.ccboard.json` file when the user requests it.
+- Export creates a downloaded `.cclens.json` file when the user requests it.
 - Import is preview-only and does not write merged sessions back into `~/.claude/`.
 
 ## Network Behavior

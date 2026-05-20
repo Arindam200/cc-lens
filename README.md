@@ -99,7 +99,7 @@ On first run, `cc-lens` prepares a small runtime cache in `~/.cc-lens/`. After t
 
 ![Export](./public/export.png)
 
-- Export a portable `.ccboard.json` file containing stats, session metadata, facets, and recent command history.
+- Export a portable `.cclens.json` file containing stats, session metadata, facets, and recent command history.
 - Preview export counts before downloading.
 - Optionally filter exports by session start date.
 - Drop an export file to preview an additive merge from another machine.
@@ -164,6 +164,15 @@ npm start
 ```bash
 npm run lint
 ```
+
+## Project Docs
+
+- [Roadmap](./ROADMAP.md): planned improvements and non-goals.
+- [Known limitations](./LIMITATIONS.md): accuracy, compatibility, and runtime caveats.
+- [Compatibility](./COMPATIBILITY.md): supported local files and reporting guidance.
+- [Contributing](./CONTRIBUTING.md): local setup, PR expectations, and manual test notes.
+- [Privacy](./PRIVACY.md): what data is read, exported, or edited.
+- [Security](./SECURITY.md): private vulnerability reporting and review checklist.
 
 ## Data Sources
 

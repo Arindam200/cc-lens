@@ -34,7 +34,7 @@ The CLI starts a local web server. The packaged CLI binds to `127.0.0.1` by defa
 
 ## Exports
 
-The Export page can generate a portable `.ccboard.json` file when you request it. Treat this file as private because it may contain session metadata, facets, and command history.
+The Export page can generate a portable `.cclens.json` file when you request it. Treat this file as private because it may contain session metadata, facets, and command history.
 
 Before sharing an export, inspect it and remove anything sensitive.
 
