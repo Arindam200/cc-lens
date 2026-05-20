@@ -1,7 +1,7 @@
 'use client'
 
 import { BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell, ResponsiveContainer } from 'recharts'
-import { CATEGORY_COLORS } from '@/lib/tool-categories'
+import { skillColor } from '@/lib/tool-categories'
 import type { SkillSummary } from '@/types/claude'
 
 interface Props {
@@ -47,8 +47,8 @@ export function SkillRankingPanel({ skills, limit = 25 }: Props) {
           ]}
         />
         <Bar dataKey="total_calls" radius={[0, 3, 3, 0]}>
-          {top.map((_, i) => (
-            <Cell key={i} fill={CATEGORY_COLORS.skill} fillOpacity={0.92} />
+          {top.map(skill => (
+            <Cell key={skill.name} fill={skillColor(skill.name)} fillOpacity={0.92} />
           ))}
         </Bar>
       </BarChart>

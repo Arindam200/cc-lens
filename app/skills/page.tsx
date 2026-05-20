@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { TopBar } from '@/components/layout/top-bar'
 import { SkillRankingPanel } from '@/components/skills/skill-ranking-panel'
 import { SkillTimelineChart } from '@/components/skills/skill-timeline-chart'
-import { CATEGORY_COLORS } from '@/lib/tool-categories'
+import { CATEGORY_COLORS, skillColor } from '@/lib/tool-categories'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -90,7 +90,11 @@ export default function SkillsPage() {
                   <CardDescription className="flex items-center gap-2">
                     <TrendingUp className="w-4 h-4" /> Top Skill
                   </CardDescription>
-                  <CardTitle className="text-xl font-semibold truncate font-mono" title={data.skills[0]?.name}>
+                  <CardTitle
+                    className="text-xl font-semibold truncate font-mono"
+                    title={data.skills[0]?.name}
+                    style={data.skills[0] ? { color: skillColor(data.skills[0].name) } : undefined}
+                  >
                     {data.skills[0]?.name ?? '—'}
                   </CardTitle>
                 </CardHeader>
@@ -153,6 +157,7 @@ export default function SkillsPage() {
                     {data.by_project.map(p => {
                       const max = data.by_project[0]?.total_calls ?? 1
                       const width = Math.max(4, Math.round((p.total_calls / max) * 100))
+                      const accent = p.top_skills[0] ? skillColor(p.top_skills[0].name) : CATEGORY_COLORS.skill
                       return (
                         <div key={p.slug} className="space-y-1.5">
                           <div className="flex items-center gap-3">
@@ -171,15 +176,29 @@ export default function SkillsPage() {
                             <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
                               <div
                                 className="h-full rounded-full"
-                                style={{ width: `${width}%`, background: `${CATEGORY_COLORS.skill}80` }}
+                                style={{
+                                  width: `${width}%`,
+                                  background: `color-mix(in srgb, ${accent} 70%, transparent)`,
+                                }}
                               />
                             </div>
                           </div>
-                          <div className="flex flex-wrap gap-1.5 text-xs text-muted-foreground font-mono">
-                            {p.top_skills.map((s, i) => (
-                              <span key={s.name}>
-                                {i > 0 && <span className="mr-1.5 text-border">·</span>}
-                                {s.name} <span className="text-muted-foreground/60">×{s.calls}</span>
+                          <div className="flex flex-wrap gap-1.5 text-xs font-mono">
+                            {p.top_skills.map(s => (
+                              <span
+                                key={s.name}
+                                className="inline-flex items-center gap-1.5 rounded-md border px-1.5 py-0.5"
+                                style={{
+                                  borderColor: `color-mix(in srgb, ${skillColor(s.name)} 40%, transparent)`,
+                                  color: skillColor(s.name),
+                                }}
+                              >
+                                <span
+                                  className="w-1.5 h-1.5 rounded-full"
+                                  style={{ background: skillColor(s.name) }}
+                                />
+                                {s.name}
+                                <span className="text-muted-foreground">×{s.calls}</span>
                               </span>
                             ))}
                           </div>
@@ -218,7 +237,15 @@ export default function SkillsPage() {
                     <tbody>
                       {data.skills.map(s => (
                         <tr key={s.name} className="border-b border-border last:border-0">
-                          <td className="py-2 font-mono text-xs">{s.name}</td>
+                          <td className="py-2 font-mono text-xs">
+                            <span className="inline-flex items-center gap-2">
+                              <span
+                                className="w-2 h-2 rounded-full shrink-0"
+                                style={{ background: skillColor(s.name) }}
+                              />
+                              {s.name}
+                            </span>
+                          </td>
                           <td className="py-2 text-right tabular-nums">{s.total_calls.toLocaleString()}</td>
                           <td className="py-2 text-right tabular-nums">{s.session_count}</td>
                           <td className="py-2 text-right tabular-nums">{s.project_count}</td>
