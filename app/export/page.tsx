@@ -101,7 +101,7 @@ export default function ExportPage() {
       const a = document.createElement('a')
       const date = new Date().toISOString().slice(0, 10)
       a.href = url
-      a.download = `ccboard-export-${date}.ccboard.json`
+      a.download = `cclens-export-${date}.cclens.json`
       a.click()
       URL.revokeObjectURL(url)
     } finally {
@@ -258,7 +258,7 @@ export default function ExportPage() {
                 <div className="space-y-1">
                   <CardTitle>Export</CardTitle>
                   <CardDescription>
-                    Download <code className="rounded bg-muted px-1 py-0.5 text-xs">.ccboard.json</code> for backup or
+                    Download <code className="rounded bg-muted px-1 py-0.5 text-xs">.cclens.json</code> for backup or
                     another machine.
                   </CardDescription>
                 </div>
@@ -368,14 +368,14 @@ export default function ExportPage() {
                 `}
               >
                 <Upload className="size-8 mb-3 text-muted-foreground opacity-80" />
-                <p className="text-sm text-foreground font-medium">Drop .ccboard.json here</p>
+                <p className="text-sm text-foreground font-medium">Drop .cclens.json here</p>
                 <p className="text-xs text-muted-foreground mt-1">
                   or <span className="text-primary underline underline-offset-2">browse files</span>
                 </p>
                 <input
                   ref={fileRef}
                   type="file"
-                  accept=".json,.ccboard.json,application/json"
+                  accept=".json,.cclens.json,application/json"
                   className="hidden"
                   onChange={e => {
                     const file = e.target.files?.[0]

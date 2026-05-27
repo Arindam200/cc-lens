@@ -137,7 +137,7 @@ async function main() {
 
   // On Windows, mixing 'inherit' + 'pipe' in stdio causes EINVAL. Use 'ignore'
   // for stdin — Next.js dev server doesn't need user input from stdin.
-  const child = spawn(process.execPath, [nextCli, 'dev', '--port', String(port)], {
+  const child = spawn(process.execPath, [nextCli, 'dev', '--webpack', '--port', String(port)], {
     cwd: CACHE_DIR,
     stdio: [process.platform === 'win32' ? 'ignore' : 'inherit', 'pipe', 'pipe'],
     env: { ...process.env, PORT: String(port) },

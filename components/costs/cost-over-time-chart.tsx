@@ -1,11 +1,12 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer, Legend } from 'recharts'
+import { AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer } from 'recharts'
 import { formatCost } from '@/lib/decode'
 import type { DailyCost } from '@/types/claude'
 
 const MODEL_COLORS: Record<string, string> = {
+  'claude-opus-4-7':        '#f97316',
   'claude-opus-4-6':        '#d97706',
   'claude-opus-4-5-20251101': '#a78bfa',
   'claude-sonnet-4-6':      'var(--viz-sky)',
@@ -20,6 +21,7 @@ function colorForModel(m: string): string {
 }
 
 function shortModel(m: string): string {
+  if (m.includes('opus-4-7'))   return 'Opus 4.7'
   if (m.includes('opus-4-6'))   return 'Opus 4.6'
   if (m.includes('opus-4-5'))   return 'Opus 4.5'
   if (m.includes('sonnet-4-6')) return 'Sonnet 4.6'

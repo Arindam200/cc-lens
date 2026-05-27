@@ -106,7 +106,7 @@ The CLI finds a free local port, starts the dashboard, and opens it in your brow
 
 ![Export](./public/export.png)
 
-- Export a portable `.ccboard.json` file containing stats, session metadata, facets, and recent command history.
+- Export a portable `.cclens.json` file containing stats, session metadata, facets, and recent command history.
 - Preview export counts before downloading.
 - Optionally filter exports by session start date.
 - Drop an export file to preview an additive merge from another machine.
@@ -171,6 +171,15 @@ npm start
 ```bash
 npm run lint
 ```
+
+## Project Docs
+
+- [Roadmap](./docs/ROADMAP.md): planned improvements and non-goals.
+- [Known limitations](./docs/LIMITATIONS.md): accuracy, compatibility, and runtime caveats.
+- [Compatibility](./docs/COMPATIBILITY.md): supported local files and reporting guidance.
+- [Contributing](./docs/CONTRIBUTING.md): local setup, PR expectations, and manual test notes.
+- [Privacy](./docs/PRIVACY.md): what data is read, exported, or edited.
+- [Security](./docs/SECURITY.md): private vulnerability reporting and review checklist.
 
 ## Data Sources
 

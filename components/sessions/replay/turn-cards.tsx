@@ -55,7 +55,7 @@ function TokenBreakdown({ turn }: { turn: ReplayTurn }) {
   )
 }
 
-export function UserTurnCard({ turn, compactionBefore, toolResults }: TurnCardProps) {
+export function UserTurnCard({ turn, compactionBefore }: TurnCardProps) {
   return (
     <div>
       {compactionBefore && <CompactionCard event={compactionBefore} />}
@@ -92,7 +92,8 @@ export function AssistantTurnCard({ turn, turnNumber, toolResults }: TurnCardPro
   const [thinkingOpen, setThinkingOpen] = useState(false)
   const [expanded, setExpanded] = useState(false)
 
-  const modelShort = turn.model?.includes('opus-4-6') ? 'Opus 4.6'
+  const modelShort = turn.model?.includes('opus-4-7') ? 'Opus 4.7'
+    : turn.model?.includes('opus-4-6') ? 'Opus 4.6'
     : turn.model?.includes('opus-4-5') ? 'Opus 4.5'
     : turn.model?.includes('opus-4')   ? 'Opus 4'
     : turn.model?.includes('sonnet-4-6') ? 'Sonnet 4.6'

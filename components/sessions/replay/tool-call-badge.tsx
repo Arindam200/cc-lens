@@ -75,22 +75,24 @@ function getToolArg(tool: ToolCall): string {
   return ''
 }
 
-function getToolIcon(name: string): LucideIcon {
-  if (name === 'Task') return Bot
-  if (name === 'WebSearch') return Search
-  if (name === 'WebFetch') return Globe
-  if (name === 'EnterPlanMode') return ClipboardList
-  if (name === 'ExitPlanMode') return CheckCircle2
-  if (name === 'TodoWrite') return ListTodo
-  if (isMcpTool(name)) return Plug
-  return Wrench
+const TOOL_ICONS: Record<string, LucideIcon> = {
+  Task:          Bot,
+  WebSearch:     Search,
+  WebFetch:      Globe,
+  EnterPlanMode: ClipboardList,
+  ExitPlanMode:  CheckCircle2,
+  TodoWrite:     ListTodo,
+}
+
+function ToolIcon({ name, color }: { name: string; color: string }) {
+  const Icon = TOOL_ICONS[name] ?? (isMcpTool(name) ? Plug : Wrench)
+  return <Icon className="h-3.5 w-3.5 shrink-0 opacity-80" style={{ color }} />
 }
 
 export function ToolCallBadge({ tool, result }: { tool: ToolCall; result?: { content: string; is_error: boolean } }) {
   const [expanded, setExpanded] = useState(false)
   const color = toolBarColor(tool.name)
   const mcp = parseMcpTool(tool.name)
-  const Icon = getToolIcon(tool.name)
   const arg = getToolArg(tool)
   const displayName = mcp ? `${mcp.server} · ${mcp.tool}` : tool.name
 
@@ -114,7 +116,7 @@ export function ToolCallBadge({ tool, result }: { tool: ToolCall; result?: { con
         style={{ color: 'var(--foreground)' }}
       >
         <span className="flex min-w-0 flex-1 items-center gap-2">
-          <Icon className="h-3.5 w-3.5 shrink-0 opacity-80" style={{ color }} />
+          <ToolIcon name={tool.name} color={color} />
           <span className="font-bold" style={{ color }}>
             {displayName}
           </span>

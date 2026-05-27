@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { SessionBadges } from './session-badges'
-import { formatCost, formatTokens, formatDuration, formatDate, projectDisplayName } from '@/lib/decode'
+import { formatCost, formatDuration, formatDate, projectDisplayName } from '@/lib/decode'
 import type { SessionWithFacet } from '@/types/claude'
 
 const PAGE_SIZE = 25
@@ -188,7 +188,6 @@ export function SessionTable({ sessions }: Props) {
               {paginated.map((s, i) => {
                 const totalMsgs = (s.user_message_count ?? 0) + (s.assistant_message_count ?? 0)
                 const totalTools = Object.values(s.tool_counts ?? {}).reduce((sum, c) => sum + c, 0)
-                const totalTokens = (s.input_tokens ?? 0) + (s.output_tokens ?? 0)
                 const projectName = projectDisplayName(s.project_path ?? '')
 
                 return (

@@ -14,18 +14,14 @@ export function useTheme() {
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>('dark')
+  const [theme, setTheme] = useState<Theme>(() => {
+    if (typeof window === 'undefined') return 'dark'
+    return localStorage.getItem('theme') === 'light' ? 'light' : 'dark'
+  })
 
   useEffect(() => {
-    const id = window.setTimeout(() => {
-      const stored = localStorage.getItem('theme')
-      const next: Theme = stored === 'light' ? 'light' : 'dark'
-      setTheme(next)
-      document.documentElement.classList.toggle('dark', next === 'dark')
-    }, 0)
-
-    return () => window.clearTimeout(id)
-  }, [])
+    document.documentElement.classList.toggle('dark', theme === 'dark')
+  }, [theme])
 
   function toggle() {
     setTheme(prev => {

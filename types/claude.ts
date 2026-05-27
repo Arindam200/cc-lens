@@ -49,6 +49,7 @@ export interface SessionMeta {
   session_id: string
   project_path: string
   start_time: string
+  last_activity?: string
   duration_minutes: number
   user_message_count: number
   assistant_message_count: number
@@ -74,6 +75,7 @@ export interface SessionMeta {
   files_modified: number
   message_hours: number[]
   user_message_timestamps: string[]
+  model_usage?: Record<string, ModelUsage>
 }
 
 // ─── Facets ──────────────────────────────────────────────────────────────────

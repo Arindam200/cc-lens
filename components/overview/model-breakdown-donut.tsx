@@ -21,14 +21,26 @@ const MODEL_COLORS = [
   '#2563eb',
   '#a78bfa',
   '#fbbf24',
+  '#ef4444',
+  '#06b6d4',
+  '#84cc16',
+  '#f97316',
+  '#ec4899',
 ]
 
 function shortModelName(model: string): string {
+  if (model.includes('opus-4-7'))      return 'Opus 4.7'
   if (model.includes('opus-4-6'))      return 'Opus 4.6'
   if (model.includes('opus-4-5'))      return 'Opus 4.5'
+  if (model.includes('opus-4-1'))      return 'Opus 4.1'
+  if (model.includes('opus-4'))        return 'Opus 4'
   if (model.includes('sonnet-4-6'))    return 'Sonnet 4.6'
   if (model.includes('sonnet-4-5'))    return 'Sonnet 4.5'
+  if (model.includes('sonnet-4'))      return 'Sonnet 4'
+  if (model.includes('sonnet'))        return 'Sonnet'
   if (model.includes('haiku-4-5'))     return 'Haiku 4.5'
+  if (model.includes('haiku-3-5'))     return 'Haiku 3.5'
+  if (model.includes('haiku'))         return 'Haiku'
   // Generic fallback
   const parts = model.split('-')
   return parts.slice(0, 3).join('-')

@@ -6,6 +6,7 @@ import type {
   SessionMeta,
   Facet,
   HistoryEntry,
+  ModelUsage,
 } from '@/types/claude'
 import { slugToPath } from '@/lib/decode'
 
@@ -13,8 +14,32 @@ function stripXmlTags(text: string): string {
   return text.replace(/<[^>]+>[\s\S]*?<\/[^>]+>/g, '').replace(/<[^>]+\/>/g, '').replace(/<[^>]+>/g, '').trim()
 }
 
+// Reading every JSONL on every request is the dominant cost at scale (thousands
+// of files × hundreds of KB each). Cache parsed sessions by file path, keyed on
+// mtime — completed sessions never change, so warm requests only re-parse files
+// that were touched since the last scan.
+
+export interface ParsedSession extends SessionMeta {
+  cwd?: string
+  slug_name?: string
+  cc_version?: string
+  git_branch?: string
+  has_compaction: boolean
+  has_thinking: boolean
+}
+
+interface CacheEntry {
+  mtimeMs: number
+  promise: Promise<ParsedSession | null>
+}
+
+const sessionCache = new Map<string, CacheEntry>()
+const projectCwdCache = new Map<string, string>()
+
 /** Resolve the real filesystem path for a project slug by reading `cwd` from its JSONL files */
 export async function resolveProjectPath(slug: string): Promise<string> {
+  const cached = projectCwdCache.get(slug)
+  if (cached) return cached
   const files = await listProjectJSONLFiles(slug)
   for (const f of files) {
     try {
@@ -24,11 +49,16 @@ export async function resolveProjectPath(slug: string): Promise<string> {
         if (!line.trim()) continue
         try {
           const obj = JSON.parse(line)
-          if (obj.cwd && typeof obj.cwd === 'string') return obj.cwd
+          if (obj.cwd && typeof obj.cwd === 'string') {
+            projectCwdCache.set(slug, obj.cwd)
+            return obj.cwd
+          }
         } catch { /* skip malformed line */ }
       }
     } catch { /* try next file */ }
   }
+  // No cwd recovered — drop any stale cache entry before falling back
+  projectCwdCache.delete(slug)
   return slugToPath(slug)
 }
 
@@ -51,33 +81,7 @@ export async function readStatsCache(): Promise<StatsCache | null> {
 
 // ─── Sessions from Project JSONL (primary source) ──────────────────────────────
 
-/** Derive session metadata directly from ~/.claude/projects/<project>/<session>.jsonl */
-export async function readSessionsFromProjectJSONL(): Promise<SessionMeta[]> {
-  const results: SessionMeta[] = []
-  try {
-    const slugs = await listProjectSlugs()
-    for (const slug of slugs) {
-      const projectPath = await resolveProjectPath(slug)
-      const files = await listProjectJSONLFiles(slug)
-      for (const filePath of files) {
-        const sessionId = path.basename(filePath, '.jsonl')
-        const meta = await deriveSessionMetaFromJSONL(filePath, sessionId, projectPath)
-        if (meta) results.push(meta)
-      }
-    }
-    return results.sort(
-      (a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime()
-    )
-  } catch {
-    return []
-  }
-}
-
-async function deriveSessionMetaFromJSONL(
-  filePath: string,
-  sessionId: string,
-  projectPath: string
-): Promise<SessionMeta | null> {
+async function parseSessionFile(filePath: string, sessionId: string): Promise<ParsedSession | null> {
   let startTime = ''
   let lastTime = ''
   let userCount = 0
@@ -94,17 +98,34 @@ async function deriveSessionMetaFromJSONL(
   let hasWebFetch = false
   const messageHours: number[] = []
   const userMessageTimestamps: string[] = []
+  let cwd: string | undefined
+  let slugName: string | undefined
+  let ccVersion: string | undefined
+  let gitBranch: string | undefined
+  let hasCompaction = false
+  let hasThinking = false
+  const modelUsage: Record<string, ModelUsage> = {}
 
   try {
     const raw = await fs.readFile(filePath, 'utf-8')
-    const lines = raw.split(/\r?\n/).filter(Boolean)
+    const lines = raw.split(/\r?\n/)
     for (const line of lines) {
+      if (!line) continue
       try {
         const obj = JSON.parse(line) as Record<string, unknown>
         const ts = obj.timestamp as string
         if (ts) {
           if (!startTime) startTime = ts
           lastTime = ts
+        }
+        if (!cwd && typeof obj.cwd === 'string') cwd = obj.cwd
+        if (!slugName && typeof obj.slug === 'string') slugName = obj.slug
+        if (!ccVersion && typeof obj.version === 'string') ccVersion = obj.version
+        if (typeof obj.gitBranch === 'string' && obj.gitBranch !== 'HEAD' && !gitBranch) {
+          gitBranch = obj.gitBranch
+        }
+        if (obj.type === 'system' && (obj as { subtype?: string }).subtype === 'compact_boundary') {
+          hasCompaction = true
         }
         if (obj.type === 'user') {
           userCount++
@@ -126,17 +147,38 @@ async function deriveSessionMetaFromJSONL(
         }
         if (obj.type === 'assistant') {
           assistantCount++
-          const msg = (obj as { message?: { usage?: Record<string, number>; content?: unknown[] } }).message
+          const msg = (obj as { message?: { model?: string; usage?: Record<string, number>; content?: unknown[] } }).message
           if (msg?.usage) {
-            inputTokens += msg.usage.input_tokens ?? 0
-            outputTokens += msg.usage.output_tokens ?? 0
-            cacheRead += msg.usage.cache_read_input_tokens ?? 0
-            cacheWrite += msg.usage.cache_creation_input_tokens ?? 0
+            const turnInput = msg.usage.input_tokens ?? 0
+            const turnOutput = msg.usage.output_tokens ?? 0
+            const turnCacheRead = msg.usage.cache_read_input_tokens ?? 0
+            const turnCacheWrite = msg.usage.cache_creation_input_tokens ?? 0
+            inputTokens += turnInput
+            outputTokens += turnOutput
+            cacheRead += turnCacheRead
+            cacheWrite += turnCacheWrite
+
+            if (msg.model) {
+              const existing = modelUsage[msg.model] ?? {
+                inputTokens: 0,
+                outputTokens: 0,
+                cacheReadInputTokens: 0,
+                cacheCreationInputTokens: 0,
+                costUSD: 0,
+                webSearchRequests: 0,
+              }
+              existing.inputTokens += turnInput
+              existing.outputTokens += turnOutput
+              existing.cacheReadInputTokens += turnCacheRead
+              existing.cacheCreationInputTokens += turnCacheWrite
+              modelUsage[msg.model] = existing
+            }
           }
           const content = msg?.content
           if (Array.isArray(content)) {
             for (const c of content) {
               const item = c as { type?: string; name?: string }
+              if (item.type === 'thinking') hasThinking = true
               if (item.type === 'tool_use' && item.name) {
                 toolCounts[item.name] = (toolCounts[item.name] ?? 0) + 1
                 if (item.name.startsWith('Task') || item.name === 'TodoWrite' || item.name === 'Agent') hasTaskAgent = true
@@ -161,8 +203,9 @@ async function deriveSessionMetaFromJSONL(
 
   return {
     session_id: sessionId,
-    project_path: projectPath,
+    project_path: cwd ?? '',
     start_time: startTime,
+    last_activity: lastTime || startTime,
     duration_minutes: durationMinutes,
     user_message_count: userCount,
     assistant_message_count: assistantCount,
@@ -188,17 +231,103 @@ async function deriveSessionMetaFromJSONL(
     files_modified: 0,
     message_hours: messageHours,
     user_message_timestamps: userMessageTimestamps,
+    model_usage: modelUsage,
+    cwd,
+    slug_name: slugName,
+    cc_version: ccVersion,
+    git_branch: gitBranch,
+    has_compaction: hasCompaction,
+    has_thinking: hasThinking,
   }
+}
+
+/**
+ * Read all sessions from ~/.claude/projects/<slug>/<session>.jsonl, with an
+ * mtime-keyed cache. Completed JSONLs never change, so warm calls only re-parse
+ * the file(s) actively being written. The returned objects include enrichment
+ * fields (slug_name, cc_version, git_branch, has_compaction, has_thinking) so
+ * callers don't need a separate second pass.
+ */
+export async function getAllParsedSessions(): Promise<ParsedSession[]> {
+  let slugs: string[]
+  try {
+    slugs = await listProjectSlugs()
+  } catch {
+    return []
+  }
+
+  type FileEntry = { slug: string; filePath: string; sessionId: string; mtimeMs: number }
+  const fileEntries: FileEntry[] = []
+
+  await Promise.all(slugs.map(async (slug) => {
+    const files = await listProjectJSONLFiles(slug)
+    await Promise.all(files.map(async (filePath) => {
+      try {
+        const stat = await fs.stat(filePath)
+        fileEntries.push({
+          slug,
+          filePath,
+          sessionId: path.basename(filePath, '.jsonl'),
+          mtimeMs: stat.mtimeMs,
+        })
+      } catch { /* file vanished between readdir and stat */ }
+    }))
+  }))
+
+  // Evict cache entries for files that no longer exist
+  const seen = new Set(fileEntries.map(f => f.filePath))
+  for (const key of sessionCache.keys()) {
+    if (!seen.has(key)) sessionCache.delete(key)
+  }
+
+  // Parse (or reuse cached) in parallel; cache stores the in-flight promise so
+  // concurrent requests for the same file dedupe to one parse.
+  const parsed = await Promise.all(fileEntries.map(async (f) => {
+    const cached = sessionCache.get(f.filePath)
+    if (cached && cached.mtimeMs === f.mtimeMs) {
+      return { slug: f.slug, session: await cached.promise }
+    }
+    const promise = parseSessionFile(f.filePath, f.sessionId)
+    sessionCache.set(f.filePath, { mtimeMs: f.mtimeMs, promise })
+    return { slug: f.slug, session: await promise }
+  }))
+
+  // Build slug → cwd map from any session that captured one
+  const slugCwd = new Map<string, string>()
+  for (const { slug, session } of parsed) {
+    if (session?.cwd && !slugCwd.has(slug)) slugCwd.set(slug, session.cwd)
+  }
+  // Keep the cross-call cache warm for resolveProjectPath callers, and evict
+  // entries for slugs that vanished or whose scan yielded no cwd this pass.
+  const knownSlugs = new Set(slugs)
+  for (const slug of projectCwdCache.keys()) {
+    if (!knownSlugs.has(slug) || !slugCwd.has(slug)) projectCwdCache.delete(slug)
+  }
+  for (const [slug, cwd] of slugCwd) projectCwdCache.set(slug, cwd)
+
+  const results: ParsedSession[] = []
+  for (const { slug, session } of parsed) {
+    if (!session) continue
+    results.push({
+      ...session,
+      project_path: slugCwd.get(slug) ?? slugToPath(slug),
+    })
+  }
+
+  results.sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime())
+  return results
+}
+
+/** Derive session metadata directly from ~/.claude/projects/<project>/<session>.jsonl */
+export async function readSessionsFromProjectJSONL(): Promise<SessionMeta[]> {
+  return getAllParsedSessions()
 }
 
 /** Get sessions: prefers JSONL (projects/*.jsonl), falls back to usage-data/session-meta */
 export async function getSessions(): Promise<SessionMeta[]> {
-  const [jsonl, meta] = await Promise.all([
-    readSessionsFromProjectJSONL(),
-    readAllSessionMeta(),
-  ])
+  const jsonl = await getAllParsedSessions()
   if (jsonl.length > 0) return jsonl
-  return meta
+  return readAllSessionMeta()
 }
 
 // ─── Session Meta (usage-data/session-meta — fallback) ────────────────────────

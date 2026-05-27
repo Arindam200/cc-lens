@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { readStatsCache, getSessions } from '@/lib/claude-reader'
-import { estimateTotalCostFromModel, cacheEfficiency, getPricing, PRICING } from '@/lib/pricing'
+import { estimateTotalCostFromModel, cacheEfficiency, getPricing } from '@/lib/pricing'
 import { projectDisplayName } from '@/lib/decode'
 import type { CostAnalytics, ModelCostBreakdown, DailyCost, ProjectCost } from '@/types/claude'
 
@@ -54,7 +54,7 @@ export async function GET() {
     const pp = s.project_path ?? ''
     const slug = pp
     const existing = projectMap.get(slug) ?? { cost: 0, input: 0, output: 0 }
-    const cost = estimateTotalCostFromModel('claude-opus-4-6', {
+    const cost = estimateTotalCostFromModel('claude-opus-4-7', {
       inputTokens: s.input_tokens ?? 0,
       outputTokens: s.output_tokens ?? 0,
       cacheCreationInputTokens: s.cache_creation_input_tokens ?? 0,
