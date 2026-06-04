@@ -105,6 +105,10 @@ async function parseSessionFile(filePath: string, sessionId: string): Promise<Pa
   let hasCompaction = false
   let hasThinking = false
   const modelUsage: Record<string, ModelUsage> = {}
+  // Claude Code re-logs the same assistant message on each tool-call round-trip
+  // within a turn, each copy carrying identical cumulative usage. Track seen
+  // message ids so per-session usage is counted once.
+  const seenAssistantIds = new Set<string>()
 
   try {
     const raw = await fs.readFile(filePath, 'utf-8')
@@ -146,8 +150,14 @@ async function parseSessionFile(filePath: string, sessionId: string): Promise<Pa
           }
         }
         if (obj.type === 'assistant') {
+          const msg = (obj as { message?: { id?: string; model?: string; usage?: Record<string, number>; content?: unknown[] } }).message
+          // Skip duplicate re-logs of the same assistant message (same id):
+          // counting them inflates tokens/cost, model usage, tool counts, and
+          // assistant_message_count (often ~3x on tool-heavy sessions).
+          const msgId = msg?.id
+          if (msgId && seenAssistantIds.has(msgId)) continue
+          if (msgId) seenAssistantIds.add(msgId)
           assistantCount++
-          const msg = (obj as { message?: { model?: string; usage?: Record<string, number>; content?: unknown[] } }).message
           if (msg?.usage) {
             const turnInput = msg.usage.input_tokens ?? 0
             const turnOutput = msg.usage.output_tokens ?? 0
