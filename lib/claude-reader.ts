@@ -513,6 +513,14 @@ export interface TodoFile {
 }
 
 export async function readTodos(): Promise<TodoFile[]> {
+  const [legacy, tasks] = await Promise.all([readLegacyTodos(), readSessionTasks()])
+  return [...legacy, ...tasks].sort((a, b) => b.mtime.localeCompare(a.mtime))
+}
+
+/** Legacy TodoWrite storage — ~/.claude/todos/<session>.json holding a
+ *  plain array of {content, status, priority} items. Newer Claude Code
+ *  versions no longer write here (files stay as empty `[]`). */
+async function readLegacyTodos(): Promise<TodoFile[]> {
   const results: TodoFile[] = []
   try {
     const dir = claudePath('todos')
@@ -532,7 +540,70 @@ export async function readTodos(): Promise<TodoFile[]> {
         })
       } catch { /* skip */ }
     }
-    return results.sort((a, b) => b.mtime.localeCompare(a.mtime))
+    return results
+  } catch {
+    return []
+  }
+}
+
+interface SessionTask {
+  id?: string
+  subject?: string
+  description?: string
+  activeForm?: string
+  status?: string
+  [key: string]: unknown
+}
+
+/** Current task storage — ~/.claude/tasks/<session-id>/<taskId>.json, one
+ *  file per task with {id, subject, description, status, ...}. Written by
+ *  the TaskCreate / TaskUpdate tools that replaced TodoWrite. Each session
+ *  directory is surfaced as one TodoFile so the UI can render it exactly
+ *  like a legacy todo list (subject → content). */
+async function readSessionTasks(): Promise<TodoFile[]> {
+  const results: TodoFile[] = []
+  try {
+    const dir = claudePath('tasks')
+    const sessions = await fs.readdir(dir, { withFileTypes: true })
+    for (const session of sessions.filter((d) => d.isDirectory())) {
+      try {
+        const sessionDir = path.join(dir, session.name)
+        const files = (await fs.readdir(sessionDir)).filter((x) => x.endsWith('.json'))
+        if (!files.length) continue
+
+        const items: Array<{ id?: string; content: string; status?: string; activeForm?: string }> = []
+        let latestMtime = new Date(0)
+
+        for (const f of files) {
+          try {
+            const fullPath = path.join(sessionDir, f)
+            const [raw, stat] = await Promise.all([
+              fs.readFile(fullPath, 'utf-8'),
+              fs.stat(fullPath),
+            ])
+            const task = JSON.parse(raw) as SessionTask
+            if (!task || task.status === 'deleted') continue
+            items.push({
+              id: task.id,
+              content: task.subject ?? task.description ?? f,
+              status: task.status,
+              activeForm: task.activeForm,
+            })
+            if (stat.mtime > latestMtime) latestMtime = stat.mtime
+          } catch { /* skip unreadable task */ }
+        }
+        if (!items.length) continue
+
+        items.sort((a, b) => Number(a.id ?? 0) - Number(b.id ?? 0))
+        results.push({
+          path: sessionDir,
+          name: session.name,
+          data: items,
+          mtime: latestMtime.toISOString(),
+        })
+      } catch { /* skip unreadable session dir */ }
+    }
+    return results
   } catch {
     return []
   }
