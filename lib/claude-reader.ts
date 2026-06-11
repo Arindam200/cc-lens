@@ -1,4 +1,6 @@
 import fs from 'fs/promises'
+import { createReadStream } from 'fs'
+import { createInterface } from 'readline'
 import path from 'path'
 import os from 'os'
 import type {
@@ -11,7 +13,27 @@ import type {
 import { slugToPath } from '@/lib/decode'
 
 function stripXmlTags(text: string): string {
-  return text.replace(/<[^>]+>[\s\S]*?<\/[^>]+>/g, '').replace(/<[^>]+\/>/g, '').replace(/<[^>]+>/g, '').trim()
+  return text
+    // Paired tags only when open/close names match, so mismatched angle
+    // brackets in prose or code don't swallow unrelated text between them
+    .replace(/<([a-zA-Z][\w-]*)\b[^>]*>[\s\S]*?<\/\1>/g, '')
+    .replace(/<\/?[a-zA-Z][\w-]*\b[^>]*\/?>/g, '')
+    .trim()
+}
+
+/** Map with a concurrency cap — keeps cold scans of large ~/.claude dirs from
+ * holding hundreds of file streams and parse buffers in flight at once. */
+async function mapPool<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+  const results: R[] = new Array(items.length)
+  let next = 0
+  async function worker() {
+    while (next < items.length) {
+      const i = next++
+      results[i] = await fn(items[i])
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker))
+  return results
 }
 
 // Reading every JSONL on every request is the dominant cost at scale (thousands
@@ -109,9 +131,13 @@ async function parseSessionFile(filePath: string, sessionId: string): Promise<Pa
   const modelUsage: Record<string, ModelUsage> = {}
 
   try {
-    const raw = await fs.readFile(filePath, 'utf-8')
-    const lines = raw.split(/\r?\n/)
-    for (const line of lines) {
+    // Stream line-by-line rather than buffering the whole file — session
+    // JSONLs can be tens of MB each
+    const rl = createInterface({
+      input: createReadStream(filePath, { encoding: 'utf-8' }),
+      crlfDelay: Infinity,
+    })
+    for await (const line of rl) {
       if (!line) continue
       try {
         const obj = JSON.parse(line) as Record<string, unknown>
@@ -285,9 +311,10 @@ export async function getAllParsedSessions(): Promise<ParsedSession[]> {
     if (!seen.has(key)) sessionCache.delete(key)
   }
 
-  // Parse (or reuse cached) in parallel; cache stores the in-flight promise so
-  // concurrent requests for the same file dedupe to one parse.
-  const parsed = await Promise.all(fileEntries.map(async (f) => {
+  // Parse (or reuse cached) with bounded concurrency; cache stores the
+  // in-flight promise so concurrent requests for the same file dedupe to one
+  // parse.
+  const parsed = await mapPool(fileEntries, 16, async (f) => {
     const cached = sessionCache.get(f.filePath)
     if (cached && cached.mtimeMs === f.mtimeMs) {
       return { slug: f.slug, session: await cached.promise }
@@ -295,7 +322,7 @@ export async function getAllParsedSessions(): Promise<ParsedSession[]> {
     const promise = parseSessionFile(f.filePath, f.sessionId)
     sessionCache.set(f.filePath, { mtimeMs: f.mtimeMs, promise })
     return { slug: f.slug, session: await promise }
-  }))
+  })
 
   // Build slug → cwd map from any session that captured one
   const slugCwd = new Map<string, string>()
@@ -404,8 +431,11 @@ export async function readJSONLLines(
   cb: (line: Record<string, unknown>) => void
 ): Promise<void> {
   try {
-    const raw = await fs.readFile(filePath, 'utf-8')
-    for (const line of raw.split(/\r?\n/)) {
+    const rl = createInterface({
+      input: createReadStream(filePath, { encoding: 'utf-8' }),
+      crlfDelay: Infinity,
+    })
+    for await (const line of rl) {
       if (!line.trim()) continue
       try {
         cb(JSON.parse(line))
