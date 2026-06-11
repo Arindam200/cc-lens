@@ -6,13 +6,13 @@ import Link from 'next/link'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer } from 'recharts'
 import { TopBar } from '@/components/layout/top-bar'
 import { formatCost, formatTokens, formatDuration, formatRelativeDate } from '@/lib/decode'
-import type { TeamAnalytics } from '@/types/claude'
+import type { TeamAnalytics, TeamFeatureAdoption } from '@/types/claude'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Users, DollarSign, MessageSquare, TrendingDown, AlertTriangle, FolderOpen, GitBranch } from 'lucide-react'
+import { Users, DollarSign, MessageSquare, TrendingDown, AlertTriangle, FolderOpen, GitBranch, Sparkles, Plug } from 'lucide-react'
 
 const fetcher = (url: string) =>
   fetch(url).then(r => { if (!r.ok) throw new Error(`API error ${r.status}`); return r.json() })
@@ -21,6 +21,32 @@ const MEMBER_COLORS = ['#d97706', '#60a5fa', '#34d399', '#a78bfa', '#f472b6', '#
 
 // Swap for a dedicated waitlist form (Tally/Typeform) once it exists
 const TEAMS_WAITLIST_URL = 'https://github.com/Arindam200/cc-lens/discussions'
+
+const IDLE_AFTER_DAYS = 14
+
+const FEATURES: Array<{ key: keyof TeamFeatureAdoption; label: string; hint: string }> = [
+  { key: 'plan_mode', label: 'Plan mode', hint: 'Sessions that entered plan mode before editing' },
+  { key: 'agents',    label: 'Agents',    hint: 'Sessions that delegated work to subagents or tasks' },
+  { key: 'skills',    label: 'Skills',    hint: 'Sessions that invoked a skill' },
+  { key: 'mcp',       label: 'MCP',       hint: 'Sessions using MCP servers' },
+  { key: 'web',       label: 'Web',       hint: 'Sessions using web search or fetch' },
+]
+
+function isIdle(lastActive: string): boolean {
+  if (!lastActive) return true
+  return Date.now() - new Date(lastActive).getTime() > IDLE_AFTER_DAYS * 86_400_000
+}
+
+function AdoptionCell({ count, total }: { count: number; total: number }) {
+  if (total === 0 || count === 0) return <span className="text-muted-foreground/50">—</span>
+  const pct = (count / total) * 100
+  return (
+    <span className={`tabular-nums ${pct >= 50 ? 'text-[#34d399] font-medium' : ''}`}>
+      {pct.toFixed(0)}%
+      <span className="text-muted-foreground text-[10px]"> ({count})</span>
+    </span>
+  )
+}
 
 export default function TeamPage() {
   const { data, error, isLoading } = useSWR<TeamAnalytics>('/api/team', fetcher, { refreshInterval: 30_000 })
@@ -200,6 +226,9 @@ export default function TeamPage() {
                             <span className="size-2.5 rounded-full shrink-0" style={{ backgroundColor: colorFor(m.member.name) }} />
                             {m.member.name}
                             {m.member.machine && <Badge variant="outline" className="text-[10px]">{m.member.machine}</Badge>}
+                            {isIdle(m.last_active) && (
+                              <Badge variant="outline" className="text-[10px] text-muted-foreground border-muted-foreground/30">idle</Badge>
+                            )}
                           </span>
                         </TableCell>
                         <TableCell className="text-right tabular-nums">{m.session_count}</TableCell>
@@ -224,6 +253,85 @@ export default function TeamPage() {
                     ))}
                   </TableBody>
                 </Table>
+              </CardContent>
+            </Card>
+
+            {/* Feature adoption */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Sparkles className="size-4" /> Feature adoption
+                </CardTitle>
+                <CardDescription>
+                  Share of each member&apos;s sessions using a capability — low adoption next to a high cost per session is coaching material
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Member</TableHead>
+                      {FEATURES.map(f => (
+                        <TableHead key={f.key} className="text-right" title={f.hint}>{f.label}</TableHead>
+                      ))}
+                      <TableHead className="text-right">Cost / session</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {data.members.map(m => (
+                      <TableRow key={`adoption-${m.member.name}-${m.member.machine ?? ''}`}>
+                        <TableCell>
+                          <span className="flex items-center gap-2 font-medium">
+                            <span className="size-2.5 rounded-full shrink-0" style={{ backgroundColor: colorFor(m.member.name) }} />
+                            {m.member.name}
+                          </span>
+                        </TableCell>
+                        {FEATURES.map(f => (
+                          <TableCell key={f.key} className="text-right text-sm">
+                            <AdoptionCell count={m.adoption?.[f.key] ?? 0} total={m.session_count} />
+                          </TableCell>
+                        ))}
+                        <TableCell className="text-right tabular-nums text-sm">{formatCost(m.cost_per_session ?? 0)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+
+            {/* MCP governance */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Plug className="size-4" /> MCP servers in use
+                </CardTitle>
+                <CardDescription>
+                  Every third-party MCP server seen in team sessions — review anything you don&apos;t recognize, since servers receive whatever sessions send them
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {data.mcp_servers.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No MCP servers seen in team exports.</p>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Server</TableHead>
+                        <TableHead className="text-right">Calls</TableHead>
+                        <TableHead>Used by</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {data.mcp_servers.map(s => (
+                        <TableRow key={s.server}>
+                          <TableCell className="font-mono text-xs">{s.server}</TableCell>
+                          <TableCell className="text-right tabular-nums">{s.total_calls.toLocaleString()}</TableCell>
+                          <TableCell className="text-muted-foreground text-xs">{s.members.join(', ')}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
               </CardContent>
             </Card>
 

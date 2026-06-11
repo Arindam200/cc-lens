@@ -371,6 +371,22 @@ export interface TeamExportPayload {
   sessions: SessionMeta[]
 }
 
+/** Per-member counts of sessions that used each Claude Code capability */
+export interface TeamFeatureAdoption {
+  plan_mode: number
+  agents: number
+  mcp: number
+  web: number
+  skills: number
+}
+
+/** One MCP server observed in team tool_counts, for governance review */
+export interface TeamMcpServer {
+  server: string
+  total_calls: number
+  members: string[]
+}
+
 export interface TeamMemberSummary {
   member: TeamMember
   exportedAt: string
@@ -392,6 +408,8 @@ export interface TeamMemberSummary {
   cc_versions: string[]
   top_projects: Array<{ name: string; sessions: number; cost: number }>
   models: Record<string, ModelUsage>
+  adoption: TeamFeatureAdoption
+  cost_per_session: number
 }
 
 export interface TeamDailyPoint {
@@ -417,5 +435,7 @@ export interface TeamAnalytics {
   /** Claude Code version → members running it (version skew view) */
   version_skew: Array<{ version: string; members: string[] }>
   models: Record<string, ModelUsage>
+  /** Every MCP server seen in member tool counts, most-used first */
+  mcp_servers: TeamMcpServer[]
   errors: string[]
 }

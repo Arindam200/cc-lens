@@ -148,3 +148,56 @@ describe('getTeamAnalytics', () => {
     expect(t.members).toEqual([])
   })
 })
+
+describe('getTeamAnalytics adoption and MCP inventory', () => {
+  let dir: string
+
+  beforeAll(async () => {
+    dir = await fs.mkdtemp(path.join(os.tmpdir(), 'cc-lens-team-adoption-'))
+    const carol: TeamExportPayload = {
+      kind: 'cclens-team-export',
+      version: '1.0.0',
+      exportedAt: '2026-06-10T00:00:00.000Z',
+      member: { name: 'Carol' },
+      redaction: 'metrics',
+      cc_versions: ['2.1.62'],
+      sessions: [
+        redactSession(makeSession({
+          session_id: 'carol-s1',
+          tool_counts: { Bash: 2, EnterPlanMode: 1, Skill: 3, mcp__linear__create_issue: 4, mcp__linear__search: 2 },
+          uses_mcp: true,
+          uses_task_agent: false,
+          uses_web_search: true,
+        }), 'metrics'),
+        redactSession(makeSession({
+          session_id: 'carol-s2',
+          tool_counts: { Edit: 5, mcp__github__get_pr: 1 },
+          uses_mcp: true,
+          uses_task_agent: true,
+          uses_web_search: false,
+        }), 'metrics'),
+      ],
+    }
+    await fs.writeFile(path.join(dir, 'carol.json'), JSON.stringify(carol))
+  })
+
+  afterAll(async () => {
+    await fs.rm(dir, { recursive: true, force: true })
+  })
+
+  it('counts feature adoption per member', async () => {
+    const t = await getTeamAnalytics(dir)
+    const carol = t.members.find(m => m.member.name === 'Carol')!
+    expect(carol.adoption).toEqual({ plan_mode: 1, agents: 1, mcp: 2, web: 1, skills: 1 })
+    expect(carol.cost_per_session).toBeCloseTo(carol.estimated_cost / 2)
+  })
+
+  it('builds the MCP server inventory from tool counts', async () => {
+    const t = await getTeamAnalytics(dir)
+    const servers = Object.fromEntries(t.mcp_servers.map(s => [s.server, s]))
+    expect(servers.linear.total_calls).toBe(6)
+    expect(servers.linear.members).toEqual(['Carol'])
+    expect(servers.github.total_calls).toBe(1)
+    expect(t.mcp_servers[0].server).toBe('linear') // most-used first
+  })
+})

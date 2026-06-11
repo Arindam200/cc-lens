@@ -6,6 +6,7 @@ import type {
   TeamAnalytics,
   TeamMemberSummary,
   TeamDailyPoint,
+  TeamFeatureAdoption,
   SessionMeta,
   ModelUsage,
 } from '@/types/claude'
@@ -96,6 +97,14 @@ function memberKey(e: TeamExportPayload): string {
   return `${e.member.name}::${e.member.machine ?? ''}`
 }
 
+/** Server name from an MCP tool key: "mcp__linear__create_issue" → "linear" */
+function mcpServerName(toolName: string): string | null {
+  if (!toolName.startsWith('mcp__')) return null
+  const rest = toolName.slice(5)
+  const sep = rest.indexOf('__')
+  return sep > 0 ? rest.slice(0, sep) : rest || null
+}
+
 export async function getTeamAnalytics(dir = teamDir()): Promise<TeamAnalytics> {
   const { exports, errors } = await readTeamExports(dir)
 
@@ -111,6 +120,7 @@ export async function getTeamAnalytics(dir = teamDir()): Promise<TeamAnalytics> 
   const dailyMap = new Map<string, TeamDailyPoint>()
   const teamModels: Record<string, ModelUsage> = {}
   const versionMembers = new Map<string, Set<string>>()
+  const mcpServers = new Map<string, { total_calls: number; members: Set<string> }>()
 
   let totalCost = 0
   let totalSessions = 0
@@ -140,6 +150,7 @@ export async function getTeamAnalytics(dir = teamDir()): Promise<TeamAnalytics> 
     let agentSessions = 0
     let firstActive = ''
     let lastActive = ''
+    const adoption: TeamFeatureAdoption = { plan_mode: 0, agents: 0, mcp: 0, web: 0, skills: 0 }
 
     for (const s of sessions) {
       const c = sessionCost(s)
@@ -153,6 +164,20 @@ export async function getTeamAnalytics(dir = teamDir()): Promise<TeamAnalytics> 
       toolErrors += s.tool_errors
       if (s.uses_mcp) mcpSessions++
       if (s.uses_task_agent) agentSessions++
+
+      if (s.uses_mcp) adoption.mcp++
+      if (s.uses_task_agent) adoption.agents++
+      if (s.uses_web_search || s.uses_web_fetch) adoption.web++
+      if ((s.tool_counts['EnterPlanMode'] ?? 0) > 0) adoption.plan_mode++
+      if ((s.tool_counts['Skill'] ?? 0) > 0) adoption.skills++
+      for (const [tool, calls] of Object.entries(s.tool_counts)) {
+        const server = mcpServerName(tool)
+        if (!server) continue
+        const entry = mcpServers.get(server) ?? { total_calls: 0, members: new Set<string>() }
+        entry.total_calls += calls
+        entry.members.add(exp.member.name)
+        mcpServers.set(server, entry)
+      }
 
       if (s.start_time && (!firstActive || s.start_time < firstActive)) firstActive = s.start_time
       const end = s.last_activity ?? s.start_time
@@ -213,6 +238,8 @@ export async function getTeamAnalytics(dir = teamDir()): Promise<TeamAnalytics> 
         .sort((a, b) => b.cost - a.cost)
         .slice(0, 5),
       models: memberModels,
+      adoption,
+      cost_per_session: sessions.length > 0 ? cost / sessions.length : 0,
     })
 
     totalCost += cost
@@ -244,6 +271,9 @@ export async function getTeamAnalytics(dir = teamDir()): Promise<TeamAnalytics> 
       .map(([version, set]) => ({ version, members: Array.from(set).sort() }))
       .sort((a, b) => b.version.localeCompare(a.version)),
     models: teamModels,
+    mcp_servers: Array.from(mcpServers.entries())
+      .map(([server, v]) => ({ server, total_calls: v.total_calls, members: Array.from(v.members).sort() }))
+      .sort((a, b) => b.total_calls - a.total_calls),
     errors,
   }
 }
