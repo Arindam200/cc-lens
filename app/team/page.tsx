@@ -19,6 +19,9 @@ const fetcher = (url: string) =>
 
 const MEMBER_COLORS = ['#d97706', '#60a5fa', '#34d399', '#a78bfa', '#f472b6', '#fbbf24', '#22d3ee', '#fb7185']
 
+// Swap for a dedicated waitlist form (Tally/Typeform) once it exists
+const TEAMS_WAITLIST_URL = 'https://github.com/Arindam200/cc-lens/discussions'
+
 export default function TeamPage() {
   const { data, error, isLoading } = useSWR<TeamAnalytics>('/api/team', fetcher, { refreshInterval: 30_000 })
 
@@ -251,6 +254,26 @@ export default function TeamPage() {
             </Card>
           </>
         )}
+
+        {/* Managed version interest */}
+        <Card className="border-dashed">
+          <CardContent className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 py-4">
+            <div>
+              <p className="text-sm font-medium">Want this real-time, across your whole org?</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                A managed version with org-wide OpenTelemetry ingestion, retention, and SSO is in the works.
+              </p>
+            </div>
+            <a
+              href={TEAMS_WAITLIST_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="shrink-0 inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+            >
+              Join the waitlist
+            </a>
+          </CardContent>
+        </Card>
       </div>
     </div>
   )
