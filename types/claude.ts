@@ -345,3 +345,77 @@ export interface ImportDiff {
   new_sessions: number
   sessions_to_add: SessionMeta[]
 }
+
+// ─── Team Mode ────────────────────────────────────────────────────────────────
+
+/** How much detail a member shares in a team export. */
+export type RedactionLevel = 'metrics' | 'titles'
+
+export interface TeamMember {
+  /** Display name chosen by the member (e.g. "Arindam" or git author name) */
+  name: string
+  /** Optional, for PR/commit attribution */
+  email?: string
+  /** Optional machine label to distinguish multiple machines per person */
+  machine?: string
+}
+
+export interface TeamExportPayload {
+  kind: 'cclens-team-export'
+  version: string
+  exportedAt: string
+  member: TeamMember
+  redaction: RedactionLevel
+  /** Claude Code versions seen in this member's sessions */
+  cc_versions: string[]
+  sessions: SessionMeta[]
+}
+
+export interface TeamMemberSummary {
+  member: TeamMember
+  exportedAt: string
+  redaction: RedactionLevel
+  session_count: number
+  total_messages: number
+  total_duration_minutes: number
+  estimated_cost: number
+  input_tokens: number
+  output_tokens: number
+  cache_read_tokens: number
+  cache_write_tokens: number
+  cache_hit_rate: number
+  tool_errors: number
+  uses_mcp_sessions: number
+  uses_agent_sessions: number
+  last_active: string
+  first_active: string
+  cc_versions: string[]
+  top_projects: Array<{ name: string; sessions: number; cost: number }>
+  models: Record<string, ModelUsage>
+}
+
+export interface TeamDailyPoint {
+  date: string
+  /** member name → estimated cost that day */
+  cost_by_member: Record<string, number>
+  /** member name → session count that day */
+  sessions_by_member: Record<string, number>
+  total_cost: number
+  total_sessions: number
+}
+
+export interface TeamAnalytics {
+  source_dir: string
+  member_count: number
+  export_count: number
+  total_cost: number
+  total_sessions: number
+  total_messages: number
+  total_cache_savings: number
+  members: TeamMemberSummary[]
+  daily: TeamDailyPoint[]
+  /** Claude Code version → members running it (version skew view) */
+  version_skew: Array<{ version: string; members: string[] }>
+  models: Record<string, ModelUsage>
+  errors: string[]
+}

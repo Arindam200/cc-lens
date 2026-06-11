@@ -82,14 +82,42 @@ member machine                       team hub (self-hosted)
 
 ## Sequencing
 
-1. **v1 (zero-infra team view):** read a folder of `.ccboard.json` exports,
-   render member filter on Overview/Costs/Sessions. No server.
+1. **v1 (zero-infra team view) — shipped:** redacted `.cclens-team.json`
+   member exports (`/api/export/team`, allowlist redaction in `lib/redact.ts`),
+   shared-folder aggregation (`lib/team-reader.ts`, `CC_LENS_TEAM_DIR`), and a
+   `/team` dashboard (cost by member, member table, version skew). See
+   `TEAM.md` for usage.
 2. **v2 (hub):** small self-hosted server with push endpoint + merge store;
    CC Lens gains a "team mode" toggle pointing at the hub URL.
 3. **v3 (governance):** blessed-config repo diffing, drift alerts, promote
    flow, Claude Code version skew dashboard.
 4. **v4 (live):** members run a tiny reporter that pushes `sessions/*.json`
    heartbeats for the team mission control board.
+
+## Enterprise ingestion: OpenTelemetry
+
+Claude Code natively exports OTel metrics and events
+(`CLAUDE_CODE_ENABLE_TELEMETRY=1`): session counts, cost, tokens by type,
+lines of code, commits, PRs, tool permission decisions, and active time —
+tagged with `user.email`, `user.account_uuid`, `organization.id`,
+`session.id`, `terminal.type`, plus custom `OTEL_RESOURCE_ATTRIBUTES` like
+`team.id` or `department`. Administrators can enforce this org-wide through
+the managed settings file, which means complete, real-time coverage with no
+manual exports.
+
+This reframes the hub (v2): rather than only accepting pushed export files,
+the hub should also be an OTLP receiver. Open-core split:
+
+- **OSS (always free):** local dashboard, redacted exports, shared-folder
+  team view — everything that reads files.
+- **Paid hub (self-hosted license or managed):** OTLP ingestion, retention,
+  member management, governance/drift (v3), live mission control (v4),
+  SSO/audit. Sales motion: teams outgrow the shared folder when they want
+  real-time data, enforcement, and >10 members.
+
+OTel gives aggregate metrics only (no session replay depth) — the JSONL
+exports stay valuable as the deep-dive layer on top of OTel's complete
+real-time coverage. The two sources join on `session.id`.
 
 ## Open questions
 
