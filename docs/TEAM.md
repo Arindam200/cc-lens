@@ -32,6 +32,35 @@ Re-exporting is additive: the newest export per member (and per machine, if
 the member sets a machine label) wins, so stale files in the folder are
 harmless.
 
+## Hub mode: push instead of copying files
+
+Any running cc-lens instance doubles as a team hub. Run it where the team can
+reach it (an office box, a small VM, behind your VPN):
+
+```bash
+# On the hub — token required before exposing beyond localhost
+CC_LENS_TEAM_TOKEN=<shared-secret> HOSTNAME=0.0.0.0 npx cc-lens
+```
+
+Members push directly from their machines, no UI needed:
+
+```bash
+npx cc-lens push --to http://hub.internal:3000 --name "Alice" --token <shared-secret>
+```
+
+`push` builds the same redacted export locally and POSTs it to
+`/api/team/push` on the hub. The hub re-runs the redaction allowlist on
+whatever it receives before storing, validates the payload, and writes one
+file per member+machine into its team dir. Add `--titles` to include first
+prompts, `--machine laptop` to distinguish machines, `--email` for commit
+attribution.
+
+Automate freshness with cron:
+
+```bash
+0 18 * * 1-5  npx cc-lens push --to http://hub.internal:3000 --name "Alice" --token $CC_LENS_TEAM_TOKEN
+```
+
 ## What the team sees
 
 - Total team cost, sessions, messages, and cache savings
