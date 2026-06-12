@@ -8,15 +8,17 @@ import { ModelBreakdownDonut } from '@/components/overview/model-breakdown-donut
 import { ProjectActivityDonut } from '@/components/overview/project-activity-donut'
 import { PeakHoursChart } from '@/components/overview/peak-hours-chart'
 import { OverviewConversationTable } from '@/components/overview/conversation-table'
+import { LiveSessionsPanel } from '@/components/overview/live-sessions-panel'
 import { StatCard } from '@/components/overview/stat-card'
 import { formatTokens, formatBytes } from '@/lib/decode'
+import { estimateCostFromUsage, estimateTotalCostFromModel, getPricing } from '@/lib/pricing'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Calendar } from '@/components/ui/calendar'
-import type { StatsCache, DailyActivity, DailyTokens } from '@/types/claude'
+import type { StatsCache, DailyActivity } from '@/types/claude'
 import type { SessionWithFacet, ProjectSummary } from '@/types/claude'
 import { format, subDays } from 'date-fns'
 import { useTheme } from '@/components/theme-provider'
@@ -54,33 +56,56 @@ const fetcher = (url: string) =>
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function computeTrend(
-  dailyActivity: DailyActivity[],
-  field: 'messageCount' | 'sessionCount',
-  days = 7,
-): number | undefined {
-  const sorted = [...dailyActivity].sort((a, b) => a.date.localeCompare(b.date))
-  const recent = sorted.slice(-days)
-  const previous = sorted.slice(-(days * 2), -days)
-  if (!recent.length || !previous.length) return undefined
-  const recentSum = recent.reduce((s, d) => s + (d[field] ?? 0), 0)
-  const prevSum = previous.reduce((s, d) => s + (d[field] ?? 0), 0)
-  if (prevSum === 0) return undefined
-  return ((recentSum - prevSum) / prevSum) * 100
+function toDay(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate())
 }
 
-function getActivitySpark(dailyActivity: DailyActivity[], field: 'messageCount' | 'sessionCount', days = 14): number[] {
-  return [...dailyActivity]
-    .sort((a, b) => a.date.localeCompare(b.date))
-    .slice(-days)
-    .map(d => d[field] ?? 0)
+function isoDay(date: Date): string {
+  return toDay(date).toISOString().slice(0, 10)
 }
 
-function getTokenSpark(tokensByDate: DailyTokens[], days = 14): number[] {
-  return [...tokensByDate]
-    .sort((a, b) => a.date.localeCompare(b.date))
-    .slice(-days)
-    .map(d => Object.values(d.tokensByModel ?? {}).reduce((s, v) => s + v, 0))
+function previousRange(from: Date, to: Date): { from: Date; to: Date } {
+  const days = Math.max(1, Math.round((toDay(to).getTime() - toDay(from).getTime()) / 86_400_000) + 1)
+  const prevTo = new Date(toDay(from))
+  prevTo.setDate(prevTo.getDate() - 1)
+  const prevFrom = new Date(prevTo)
+  prevFrom.setDate(prevFrom.getDate() - (days - 1))
+  return { from: prevFrom, to: prevTo }
+}
+
+function inRange(dateStr: string, from: Date, to: Date): boolean {
+  const day = dateStr.slice(0, 10)
+  return day >= isoDay(from) && day <= isoDay(to)
+}
+
+function filterActivityByRange(dailyActivity: DailyActivity[], from: Date, to: Date): DailyActivity[] {
+  return dailyActivity.filter(d => inRange(d.date, from, to))
+}
+
+function sessionCost(session: SessionWithFacet): number {
+  if (session.model_usage && Object.keys(session.model_usage).length > 0) {
+    return Object.entries(session.model_usage).reduce(
+      (sum, [model, usage]) => sum + estimateTotalCostFromModel(model, usage),
+      0
+    )
+  }
+  return estimateCostFromUsage('claude-opus-4-7', {
+    input_tokens: session.input_tokens ?? 0,
+    output_tokens: session.output_tokens ?? 0,
+    cache_creation_input_tokens: session.cache_creation_input_tokens ?? 0,
+    cache_read_input_tokens: session.cache_read_input_tokens ?? 0,
+  })
+}
+
+function sessionCacheSavings(session: SessionWithFacet): number {
+  if (session.model_usage && Object.keys(session.model_usage).length > 0) {
+    return Object.entries(session.model_usage).reduce((sum, [model, usage]) => {
+      const p = getPricing(model)
+      return sum + ((usage.cacheReadInputTokens ?? 0) * (p.input - p.cacheRead))
+    }, 0)
+  }
+  const p = getPricing('claude-opus-4-7')
+  return (session.cache_read_input_tokens ?? 0) * (p.input - p.cacheRead)
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -106,12 +131,13 @@ export function OverviewClient() {
   const projectCount = projects.length
 
   const usingCustom = !!(customRange.from && customRange.to)
+  // +1 so the range is inclusive of both endpoints (same-day selection = 1 day)
   const chartDays = usingCustom
-    ? Math.ceil((customRange.to!.getTime() - customRange.from!.getTime()) / (24 * 60 * 60 * 1000))
+    ? Math.ceil((customRange.to!.getTime() - customRange.from!.getTime()) / (24 * 60 * 60 * 1000)) + 1
     : datePreset === '7d' ? 7 : datePreset === '30d' ? 30 : 90
   const effectiveDateFrom = usingCustom
     ? format(customRange.from!, 'MM/dd/yyyy')
-    : format(subDays(new Date(), chartDays), 'MM/dd/yyyy')
+    : format(subDays(new Date(), chartDays - 1), 'MM/dd/yyyy')
   const effectiveDateTo = usingCustom
     ? format(customRange.to!, 'MM/dd/yyyy')
     : format(new Date(), 'MM/dd/yyyy')
@@ -119,6 +145,16 @@ export function OverviewClient() {
   const pickerLabel = usingCustom
     ? `${format(customRange.from!, 'MMM d')} – ${format(customRange.to!, 'MMM d, yyyy')}`
     : 'Pick a date'
+
+  // Error has to be checked before the loading skeleton: on a failed first
+  // load `data` stays undefined forever, which would pin us on the skeleton.
+  if (error) {
+    return (
+      <div className="px-6 py-6 text-destructive text-sm font-mono">
+        ✗ error loading data: {String(error)}
+      </div>
+    )
+  }
 
   // ── Loading ──────────────────────────────────────────────────────────────
   if (isLoading || !data || !data.computed) {
@@ -142,33 +178,179 @@ export function OverviewClient() {
     )
   }
 
-  if (error) {
-    return (
-      <div className="px-6 py-6 text-destructive text-sm font-mono">
-        ✗ error loading data: {String(error)}
-      </div>
-    )
-  }
-
   const { stats, computed } = data
+  const rangeFrom = usingCustom ? toDay(customRange.from!) : toDay(subDays(new Date(), chartDays - 1))
+  const rangeTo = usingCustom ? toDay(customRange.to!) : toDay(new Date())
+  const prevRange = previousRange(rangeFrom, rangeTo)
+  const tokensByDate = stats.dailyModelTokens ?? stats.tokensByDate ?? []
+
+  const rangeMetrics = (() => {
+    const rangeSessions = sessions.filter(s => inRange(s.start_time, rangeFrom, rangeTo))
+    const previousSessions = sessions.filter(s => inRange(s.start_time, prevRange.from, prevRange.to))
+    const rangeActivity = filterActivityByRange(stats.dailyActivity, rangeFrom, rangeTo)
+
+    const messages = rangeSessions.reduce(
+      (sum, s) => sum + (s.user_message_count ?? 0) + (s.assistant_message_count ?? 0),
+      0
+    )
+    const previousMessages = previousSessions.reduce(
+      (sum, s) => sum + (s.user_message_count ?? 0) + (s.assistant_message_count ?? 0),
+      0
+    )
+
+    const totalInputTokens = rangeSessions.reduce((sum, s) => sum + (s.input_tokens ?? 0), 0)
+    const totalOutputTokens = rangeSessions.reduce((sum, s) => sum + (s.output_tokens ?? 0), 0)
+    const totalCacheReadTokens = rangeSessions.reduce((sum, s) => sum + (s.cache_read_input_tokens ?? 0), 0)
+    const totalCacheWriteTokens = rangeSessions.reduce((sum, s) => sum + (s.cache_creation_input_tokens ?? 0), 0)
+    const totalTokens = totalInputTokens + totalOutputTokens + totalCacheReadTokens + totalCacheWriteTokens
+
+    const previousTokens = previousSessions.reduce(
+      (sum, s) =>
+        sum +
+        (s.input_tokens ?? 0) +
+        (s.output_tokens ?? 0) +
+        (s.cache_read_input_tokens ?? 0) +
+        (s.cache_creation_input_tokens ?? 0),
+      0
+    )
+
+    const totalCost = rangeSessions.reduce((sum, s) => sum + sessionCost(s), 0)
+    const previousCost = previousSessions.reduce((sum, s) => sum + sessionCost(s), 0)
+    const totalCacheSavings = rangeSessions.reduce((sum, s) => sum + sessionCacheSavings(s), 0)
+    const modelUsage = rangeSessions.reduce<Record<string, NonNullable<SessionWithFacet['model_usage']>[string]>>((acc, session) => {
+      for (const [model, usage] of Object.entries(session.model_usage ?? {})) {
+        const existing = acc[model] ?? {
+          inputTokens: 0,
+          outputTokens: 0,
+          cacheReadInputTokens: 0,
+          cacheCreationInputTokens: 0,
+          costUSD: 0,
+          webSearchRequests: 0,
+        }
+        existing.inputTokens += usage.inputTokens ?? 0
+        existing.outputTokens += usage.outputTokens ?? 0
+        existing.cacheReadInputTokens += usage.cacheReadInputTokens ?? 0
+        existing.cacheCreationInputTokens += usage.cacheCreationInputTokens ?? 0
+        existing.costUSD += usage.costUSD ?? 0
+        existing.webSearchRequests += usage.webSearchRequests ?? 0
+        acc[model] = existing
+      }
+      return acc
+    }, {})
+    const hourCounts = rangeSessions.reduce<Record<string, number>>((acc, session) => {
+      for (const hour of session.message_hours ?? []) {
+        const key = String(hour)
+        acc[key] = (acc[key] ?? 0) + 1
+      }
+      return acc
+    }, {})
+    const projects = Array.from(
+      rangeSessions.reduce((acc, session) => {
+        const projectPath = session.project_path || 'Unknown'
+        const existing = acc.get(projectPath) ?? {
+          slug: projectPath.replace(/\//g, '-'),
+          project_path: projectPath,
+          display_name: projectPath.split(/[\\/]/).filter(Boolean).pop() || 'Unknown',
+          session_count: 0,
+          total_messages: 0,
+          total_duration_minutes: 0,
+          total_lines_added: 0,
+          total_lines_removed: 0,
+          total_files_modified: 0,
+          git_commits: 0,
+          git_pushes: 0,
+          estimated_cost: 0,
+          input_tokens: 0,
+          output_tokens: 0,
+          languages: {},
+          tool_counts: {},
+          last_active: '',
+          first_active: '',
+          uses_mcp: false,
+          uses_task_agent: false,
+          branches: [],
+        } satisfies ProjectSummary
+        existing.session_count += 1
+        existing.total_messages += (session.user_message_count ?? 0) + (session.assistant_message_count ?? 0)
+        existing.total_duration_minutes += session.duration_minutes ?? 0
+        existing.estimated_cost += sessionCost(session)
+        existing.input_tokens += session.input_tokens ?? 0
+        existing.output_tokens += session.output_tokens ?? 0
+        existing.uses_mcp = existing.uses_mcp || session.uses_mcp
+        existing.uses_task_agent = existing.uses_task_agent || session.uses_task_agent
+        if (!existing.first_active || session.start_time < existing.first_active) existing.first_active = session.start_time
+        if (!existing.last_active || session.start_time > existing.last_active) existing.last_active = session.start_time
+        acc.set(projectPath, existing)
+        return acc
+      }, new Map<string, ProjectSummary>()).values()
+    ).sort((a, b) => b.input_tokens + b.output_tokens - (a.input_tokens + a.output_tokens))
+
+    const trend = (current: number, previous: number) => {
+      if (previous === 0) return current === 0 ? undefined : 100
+      return ((current - previous) / previous) * 100
+    }
+
+    const tokenSpark = tokensByDate
+      .filter(d => inRange(d.date, rangeFrom, rangeTo))
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .map(d => Object.values(d.tokensByModel ?? {}).reduce((sum, value) => sum + value, 0))
+
+    const fallbackTokenSpark = rangeActivity.map(d => {
+      const daySessions = rangeSessions.filter(s => s.start_time.slice(0, 10) === d.date.slice(0, 10))
+      return daySessions.reduce(
+        (sum, s) =>
+          sum +
+          (s.input_tokens ?? 0) +
+          (s.output_tokens ?? 0) +
+          (s.cache_read_input_tokens ?? 0) +
+          (s.cache_creation_input_tokens ?? 0),
+        0
+      )
+    })
+
+    return {
+      sessionCount: rangeSessions.length,
+      messages,
+      activeDays: rangeActivity.filter(d => d.sessionCount > 0).length,
+      totalInputTokens,
+      totalOutputTokens,
+      totalCacheReadTokens,
+      totalCacheWriteTokens,
+      totalTokens,
+      totalCost,
+      totalCacheSavings,
+      sessionTrend: trend(rangeSessions.length, previousSessions.length),
+      messageTrend: trend(messages, previousMessages),
+      tokenTrend: trend(totalTokens, previousTokens),
+      costTrend: trend(totalCost, previousCost),
+      sessionSpark: rangeActivity.map(d => d.sessionCount ?? 0),
+      messageSpark: rangeActivity.map(d => d.messageCount ?? 0),
+      tokenSpark: tokenSpark.length > 0 ? tokenSpark : fallbackTokenSpark,
+      costSpark: rangeActivity.map(d => {
+        const day = d.date.slice(0, 10)
+        return rangeSessions
+          .filter(s => s.start_time.slice(0, 10) === day)
+          .reduce((sum, s) => sum + sessionCost(s), 0)
+      }),
+      modelUsage,
+      hourCounts,
+      projects,
+      sessions: rangeSessions,
+    }
+  })()
 
   const inputBlue = theme === 'light' ? '#1d4ed8' : '#60a5fa'
   const tokenSegs = [
-    { label: 'input',       value: computed.totalInputTokens,      color: inputBlue },
-    { label: 'output',      value: computed.totalOutputTokens,     color: '#d97706' },
-    { label: 'cache read',  value: computed.totalCacheReadTokens,  color: '#34d399' },
-    { label: 'cache write', value: computed.totalCacheWriteTokens, color: '#a78bfa' },
+    { label: 'input',       value: rangeMetrics.totalInputTokens,      color: inputBlue },
+    { label: 'output',      value: rangeMetrics.totalOutputTokens,     color: '#d97706' },
+    { label: 'cache read',  value: rangeMetrics.totalCacheReadTokens,  color: '#34d399' },
+    { label: 'cache write', value: rangeMetrics.totalCacheWriteTokens, color: '#a78bfa' },
   ]
   const totalTokens =
-    computed.totalInputTokens +
-    computed.totalOutputTokens +
-    computed.totalCacheReadTokens +
-    computed.totalCacheWriteTokens
-
-  const tokensByDate = stats.dailyModelTokens ?? stats.tokensByDate ?? []
-
-  // Trends compare last N days vs previous N days (capped at 30 to avoid sparse data)
-  const trendWindow = Math.min(Math.max(chartDays, 7), 30)
+    rangeMetrics.totalInputTokens +
+    rangeMetrics.totalOutputTokens +
+    rangeMetrics.totalCacheReadTokens +
+    rangeMetrics.totalCacheWriteTokens
 
   return (
     <div className="px-6 py-6 space-y-6 bg-background">
@@ -224,39 +406,44 @@ export function OverviewClient() {
         </div>
       </div>
 
+      
+
       {/* ── Stat cards ────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="Sessions"
-          value={computed.sessionCount.toLocaleString()}
-          description={`${computed.sessionsThisMonth} this month · ${computed.sessionsThisWeek} this week`}
-          trend={computeTrend(stats.dailyActivity, 'sessionCount', trendWindow)}
-          sparkData={getActivitySpark(stats.dailyActivity, 'sessionCount')}
+          value={rangeMetrics.sessionCount.toLocaleString()}
+          description={`${rangeMetrics.activeDays} active days in range`}
+          trend={rangeMetrics.sessionTrend}
+          sparkData={rangeMetrics.sessionSpark}
           accentColor="var(--foreground)"
         />
         <StatCard
           title="Messages"
-          value={stats.totalMessages.toLocaleString()}
-          description={`${computed.activeDays} active days`}
-          trend={computeTrend(stats.dailyActivity, 'messageCount', trendWindow)}
-          sparkData={getActivitySpark(stats.dailyActivity, 'messageCount')}
+          value={rangeMetrics.messages.toLocaleString()}
+          description={`${rangeMetrics.activeDays} active days`}
+          trend={rangeMetrics.messageTrend}
+          sparkData={rangeMetrics.messageSpark}
           accentColor="#d97706"
         />
         <StatCard
           title="Tokens Used"
-          value={formatTokens(computed.totalTokens)}
-          description={`${formatTokens(computed.totalCacheReadTokens)} from cache`}
-          sparkData={getTokenSpark(tokensByDate)}
+          value={formatTokens(rangeMetrics.totalTokens)}
+          description={`${formatTokens(rangeMetrics.totalCacheReadTokens)} from cache`}
+          trend={rangeMetrics.tokenTrend}
+          sparkData={rangeMetrics.tokenSpark}
           accentColor={inputBlue}
         />
         <StatCard
           title="Estimated Cost"
-          value={`$${computed.totalCost.toFixed(2)}`}
-          description={`$${computed.totalCacheSavings.toFixed(2)} saved via cache`}
-          sparkData={getTokenSpark(tokensByDate)}
+          value={`$${rangeMetrics.totalCost.toFixed(2)}`}
+          description={`$${rangeMetrics.totalCacheSavings.toFixed(2)} saved via cache`}
+          trend={rangeMetrics.costTrend}
+          sparkData={rangeMetrics.costSpark}
           accentColor="#34d399"
         />
       </div>
+      
 
       {/* ── Main charts row ───────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
@@ -287,17 +474,20 @@ export function OverviewClient() {
             <div className="flex items-start justify-between">
               <div>
                 <CardTitle>Model Distribution</CardTitle>
-                <CardDescription>Token usage by model</CardDescription>
+                <CardDescription>Token usage by model in selected range</CardDescription>
               </div>
               <PieChart className="w-4 h-4 text-muted-foreground mt-0.5" />
             </div>
           </CardHeader>
           <CardContent>
-            <ModelBreakdownDonut modelUsage={stats.modelUsage} />
+            <ModelBreakdownDonut modelUsage={rangeMetrics.modelUsage} />
           </CardContent>
         </Card>
       </div>
-
+      
+      {/* ── Live sessions ─────────────────────────────────────────────────── */}
+      <LiveSessionsPanel />
+      
       {/* ── Secondary charts row ──────────────────────────────────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
@@ -305,13 +495,13 @@ export function OverviewClient() {
             <div className="flex items-start justify-between">
               <div>
                 <CardTitle>Peak Hours</CardTitle>
-                <CardDescription>Activity by hour of day</CardDescription>
+                <CardDescription>Activity by hour of day in selected range</CardDescription>
               </div>
               <Clock className="w-4 h-4 text-muted-foreground mt-0.5" />
             </div>
           </CardHeader>
           <CardContent>
-            <PeakHoursChart hourCounts={stats.hourCounts ?? {}} />
+            <PeakHoursChart hourCounts={rangeMetrics.hourCounts} />
           </CardContent>
         </Card>
 
@@ -320,13 +510,13 @@ export function OverviewClient() {
             <div className="flex items-start justify-between">
               <div>
                 <CardTitle>Project Activity</CardTitle>
-                <CardDescription>Distribution across projects</CardDescription>
+                <CardDescription>Distribution across projects in selected range</CardDescription>
               </div>
               <PieChart className="w-4 h-4 text-muted-foreground mt-0.5" />
             </div>
           </CardHeader>
           <CardContent>
-            <ProjectActivityDonut projects={projects} />
+            <ProjectActivityDonut projects={rangeMetrics.projects} />
           </CardContent>
         </Card>
       </div>
@@ -335,7 +525,7 @@ export function OverviewClient() {
       <Card>
         <CardHeader className="pb-3">
           <CardTitle>Token Breakdown</CardTitle>
-          <CardDescription>Distribution across token types (all time)</CardDescription>
+          <CardDescription>Distribution across token types in selected range</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           {totalTokens > 0 ? (
@@ -381,10 +571,10 @@ export function OverviewClient() {
       <Card>
         <CardHeader>
           <CardTitle>Recent Sessions</CardTitle>
-          <CardDescription>Your latest Claude Code conversations</CardDescription>
+          <CardDescription>Your latest Claude Code conversations in selected range</CardDescription>
         </CardHeader>
         <CardContent>
-          <OverviewConversationTable sessions={sessions} />
+          <OverviewConversationTable sessions={rangeMetrics.sessions} />
         </CardContent>
       </Card>
 

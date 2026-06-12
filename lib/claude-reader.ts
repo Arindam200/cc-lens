@@ -1,17 +1,39 @@
 import fs from 'fs/promises'
+import { createReadStream } from 'fs'
+import { createInterface } from 'readline'
 import path from 'path'
 import os from 'os'
 import type {
   StatsCache,
   SessionMeta,
-  Facet,
   HistoryEntry,
   ModelUsage,
+  LiveSession,
 } from '@/types/claude'
 import { slugToPath } from '@/lib/decode'
 
 function stripXmlTags(text: string): string {
-  return text.replace(/<[^>]+>[\s\S]*?<\/[^>]+>/g, '').replace(/<[^>]+\/>/g, '').replace(/<[^>]+>/g, '').trim()
+  return text
+    // Paired tags only when open/close names match, so mismatched angle
+    // brackets in prose or code don't swallow unrelated text between them
+    .replace(/<([a-zA-Z][\w-]*)\b[^>]*>[\s\S]*?<\/\1>/g, '')
+    .replace(/<\/?[a-zA-Z][\w-]*\b[^>]*\/?>/g, '')
+    .trim()
+}
+
+/** Map with a concurrency cap — keeps cold scans of large ~/.claude dirs from
+ * holding hundreds of file streams and parse buffers in flight at once. */
+async function mapPool<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+  const results: R[] = new Array(items.length)
+  let next = 0
+  async function worker() {
+    while (next < items.length) {
+      const i = next++
+      results[i] = await fn(items[i])
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker))
+  return results
 }
 
 // Reading every JSONL on every request is the dominant cost at scale (thousands
@@ -22,6 +44,7 @@ function stripXmlTags(text: string): string {
 export interface ParsedSession extends SessionMeta {
   cwd?: string
   slug_name?: string
+  ai_title?: string
   cc_version?: string
   git_branch?: string
   has_compaction: boolean
@@ -100,6 +123,7 @@ async function parseSessionFile(filePath: string, sessionId: string): Promise<Pa
   const userMessageTimestamps: string[] = []
   let cwd: string | undefined
   let slugName: string | undefined
+  let aiTitle: string | undefined
   let ccVersion: string | undefined
   let gitBranch: string | undefined
   let hasCompaction = false
@@ -107,9 +131,13 @@ async function parseSessionFile(filePath: string, sessionId: string): Promise<Pa
   const modelUsage: Record<string, ModelUsage> = {}
 
   try {
-    const raw = await fs.readFile(filePath, 'utf-8')
-    const lines = raw.split(/\r?\n/)
-    for (const line of lines) {
+    // Stream line-by-line rather than buffering the whole file — session
+    // JSONLs can be tens of MB each
+    const rl = createInterface({
+      input: createReadStream(filePath, { encoding: 'utf-8' }),
+      crlfDelay: Infinity,
+    })
+    for await (const line of rl) {
       if (!line) continue
       try {
         const obj = JSON.parse(line) as Record<string, unknown>
@@ -120,6 +148,8 @@ async function parseSessionFile(filePath: string, sessionId: string): Promise<Pa
         }
         if (!cwd && typeof obj.cwd === 'string') cwd = obj.cwd
         if (!slugName && typeof obj.slug === 'string') slugName = obj.slug
+        // ai-title lines repeat as the title is refined; the last one wins
+        if (obj.type === 'ai-title' && typeof obj.aiTitle === 'string') aiTitle = obj.aiTitle
         if (!ccVersion && typeof obj.version === 'string') ccVersion = obj.version
         if (typeof obj.gitBranch === 'string' && obj.gitBranch !== 'HEAD' && !gitBranch) {
           gitBranch = obj.gitBranch
@@ -234,6 +264,7 @@ async function parseSessionFile(filePath: string, sessionId: string): Promise<Pa
     model_usage: modelUsage,
     cwd,
     slug_name: slugName,
+    ai_title: aiTitle,
     cc_version: ccVersion,
     git_branch: gitBranch,
     has_compaction: hasCompaction,
@@ -280,17 +311,26 @@ export async function getAllParsedSessions(): Promise<ParsedSession[]> {
     if (!seen.has(key)) sessionCache.delete(key)
   }
 
-  // Parse (or reuse cached) in parallel; cache stores the in-flight promise so
-  // concurrent requests for the same file dedupe to one parse.
-  const parsed = await Promise.all(fileEntries.map(async (f) => {
+  // Parse (or reuse cached) with bounded concurrency; cache stores the
+  // in-flight promise so concurrent requests for the same file dedupe to one
+  // parse.
+  const parsed = await mapPool(fileEntries, 16, async (f) => {
     const cached = sessionCache.get(f.filePath)
     if (cached && cached.mtimeMs === f.mtimeMs) {
       return { slug: f.slug, session: await cached.promise }
     }
-    const promise = parseSessionFile(f.filePath, f.sessionId)
+    // Failed parses are evicted so a transient read error doesn't hide the
+    // session until the file's mtime happens to change again.
+    const promise = parseSessionFile(f.filePath, f.sessionId).then(session => {
+      if (!session) sessionCache.delete(f.filePath)
+      return session
+    }, err => {
+      sessionCache.delete(f.filePath)
+      throw err
+    })
     sessionCache.set(f.filePath, { mtimeMs: f.mtimeMs, promise })
     return { slug: f.slug, session: await promise }
-  }))
+  })
 
   // Build slug → cwd map from any session that captured one
   const slugCwd = new Map<string, string>()
@@ -323,83 +363,48 @@ export async function readSessionsFromProjectJSONL(): Promise<SessionMeta[]> {
   return getAllParsedSessions()
 }
 
-/** Get sessions: prefers JSONL (projects/*.jsonl), falls back to usage-data/session-meta */
+/** Get all sessions derived from projects/*.jsonl */
 export async function getSessions(): Promise<SessionMeta[]> {
-  const jsonl = await getAllParsedSessions()
-  if (jsonl.length > 0) return jsonl
-  return readAllSessionMeta()
+  return getAllParsedSessions()
 }
 
-// ─── Session Meta (usage-data/session-meta — fallback) ────────────────────────
+// ─── Live Sessions (~/.claude/sessions/*.json) ───────────────────────────────
 
-export async function readAllSessionMeta(): Promise<SessionMeta[]> {
-  const dir = claudePath('usage-data', 'session-meta')
+function isPidAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Read currently running Claude Code processes from ~/.claude/sessions/*.json.
+ * Files can linger after a process exits, so each entry is verified against a
+ * live pid before being returned.
+ */
+export async function readLiveSessions(): Promise<LiveSession[]> {
+  const dir = claudePath('sessions')
   try {
     const files = await fs.readdir(dir)
-    const results: SessionMeta[] = []
+    const results: LiveSession[] = []
     await Promise.all(
       files
         .filter(f => f.endsWith('.json'))
         .map(async f => {
           try {
             const raw = await fs.readFile(path.join(dir, f), 'utf-8')
-            const parsed = JSON.parse(raw) as SessionMeta
-            results.push(parsed)
+            const parsed = JSON.parse(raw) as LiveSession
+            if (parsed.pid && parsed.sessionId && isPidAlive(parsed.pid)) {
+              results.push(parsed)
+            }
           } catch { /* skip malformed */ }
         })
     )
-    return results.sort(
-      (a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime()
-    )
+    return results.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))
   } catch {
     return []
-  }
-}
-
-export async function readSessionMeta(sessionId: string): Promise<SessionMeta | null> {
-  try {
-    const raw = await fs.readFile(
-      claudePath('usage-data', 'session-meta', `${sessionId}.json`),
-      'utf-8'
-    )
-    return JSON.parse(raw) as SessionMeta
-  } catch {
-    return null
-  }
-}
-
-// ─── Facets ──────────────────────────────────────────────────────────────────
-
-export async function readAllFacets(): Promise<Facet[]> {
-  const dir = claudePath('usage-data', 'facets')
-  try {
-    const files = await fs.readdir(dir)
-    const results: Facet[] = []
-    await Promise.all(
-      files
-        .filter(f => f.endsWith('.json'))
-        .map(async f => {
-          try {
-            const raw = await fs.readFile(path.join(dir, f), 'utf-8')
-            results.push(JSON.parse(raw) as Facet)
-          } catch { /* skip */ }
-        })
-    )
-    return results
-  } catch {
-    return []
-  }
-}
-
-export async function readFacet(sessionId: string): Promise<Facet | null> {
-  try {
-    const raw = await fs.readFile(
-      claudePath('usage-data', 'facets', `${sessionId}.json`),
-      'utf-8'
-    )
-    return JSON.parse(raw) as Facet
-  } catch {
-    return null
   }
 }
 
@@ -434,8 +439,11 @@ export async function readJSONLLines(
   cb: (line: Record<string, unknown>) => void
 ): Promise<void> {
   try {
-    const raw = await fs.readFile(filePath, 'utf-8')
-    for (const line of raw.split(/\r?\n/)) {
+    const rl = createInterface({
+      input: createReadStream(filePath, { encoding: 'utf-8' }),
+      crlfDelay: Infinity,
+    })
+    for await (const line of rl) {
       if (!line.trim()) continue
       try {
         cb(JSON.parse(line))
@@ -503,41 +511,6 @@ export async function readPlans(): Promise<PlanFile[]> {
   }
 }
 
-// ─── Todos ───────────────────────────────────────────────────────────────────
-
-export interface TodoFile {
-  path: string
-  name: string
-  data: unknown
-  mtime: string
-}
-
-export async function readTodos(): Promise<TodoFile[]> {
-  const results: TodoFile[] = []
-  try {
-    const dir = claudePath('todos')
-    const files = await fs.readdir(dir)
-    for (const f of files.filter((x) => x.endsWith('.json'))) {
-      try {
-        const fullPath = path.join(dir, f)
-        const [raw, stat] = await Promise.all([
-          fs.readFile(fullPath, 'utf-8'),
-          fs.stat(fullPath),
-        ])
-        results.push({
-          path: fullPath,
-          name: f.replace(/\.json$/, ''),
-          data: JSON.parse(raw),
-          mtime: stat.mtime.toISOString(),
-        })
-      } catch { /* skip */ }
-    }
-    return results.sort((a, b) => b.mtime.localeCompare(a.mtime))
-  } catch {
-    return []
-  }
-}
-
 // ─── History ─────────────────────────────────────────────────────────────────
 
 export async function readHistory(limit = 200): Promise<HistoryEntry[]> {
@@ -594,18 +567,87 @@ export async function readSkills(): Promise<SkillInfo[]> {
 
 export interface PluginInfo {
   id: string
+  name: string
+  marketplace: string
   scope: string
   version: string
   installedAt: string
+  lastUpdated?: string
 }
 
 export async function readInstalledPlugins(): Promise<PluginInfo[]> {
   try {
     const raw = await fs.readFile(claudePath('plugins', 'installed_plugins.json'), 'utf-8')
-    const json = JSON.parse(raw) as { plugins: Record<string, Array<{ scope: string; version: string; installedAt: string }>> }
-    return Object.entries(json.plugins).flatMap(([id, installs]) =>
-      installs.map(inst => ({ id, scope: inst.scope, version: inst.version, installedAt: inst.installedAt }))
-    )
+    const json = JSON.parse(raw) as { plugins: Record<string, Array<{ scope: string; version: string; installedAt: string; lastUpdated?: string }>> }
+    return Object.entries(json.plugins).flatMap(([id, installs]) => {
+      const at = id.lastIndexOf('@')
+      const name = at > 0 ? id.slice(0, at) : id
+      const marketplace = at > 0 ? id.slice(at + 1) : ''
+      return installs.map(inst => ({
+        id,
+        name,
+        marketplace,
+        scope: inst.scope,
+        version: inst.version,
+        installedAt: inst.installedAt,
+        lastUpdated: inst.lastUpdated,
+      }))
+    })
+  } catch {
+    return []
+  }
+}
+
+// ─── Config markdown dirs (agents, commands, rules, output-styles) ───────────
+
+export interface ConfigFileInfo {
+  name: string
+  description: string
+  mtime: string
+}
+
+/**
+ * List the markdown entries of a ~/.claude config directory. Both single-file
+ * entries (commands/foo.md) and directory entries with an entrypoint
+ * (skills/foo/SKILL.md) are supported. The description comes from frontmatter
+ * `description:` when present, otherwise the first heading or text line.
+ */
+export async function readConfigDir(dirName: string, entrypoint?: string): Promise<ConfigFileInfo[]> {
+  const dir = claudePath(dirName)
+  const results: ConfigFileInfo[] = []
+  try {
+    const entries = await fs.readdir(dir, { withFileTypes: true })
+    await Promise.all(entries.map(async e => {
+      if (e.name.startsWith('.')) return
+      let filePath: string
+      let name: string
+      if (e.isDirectory()) {
+        if (!entrypoint) return
+        filePath = path.join(dir, e.name, entrypoint)
+        name = e.name
+      } else if (e.name.endsWith('.md')) {
+        filePath = path.join(dir, e.name)
+        name = e.name.replace(/\.md$/, '')
+      } else {
+        return
+      }
+      try {
+        const [raw, stat] = await Promise.all([fs.readFile(filePath, 'utf-8'), fs.stat(filePath)])
+        const fmMatch = raw.match(/^---\r?\n([\s\S]*?)\r?\n---/)
+        let description = ''
+        if (fmMatch) {
+          const descMatch = fmMatch[1].match(/^description:\s*(.+)$/m)
+          if (descMatch) description = descMatch[1].trim().replace(/^["']|["']$/g, '')
+        }
+        if (!description) {
+          const body = fmMatch ? raw.slice(fmMatch[0].length) : raw
+          const line = body.split(/\r?\n/).find(l => l.trim())
+          description = line ? line.replace(/^#+\s*/, '').trim() : ''
+        }
+        results.push({ name, description: description.slice(0, 300), mtime: stat.mtime.toISOString() })
+      } catch { /* no entrypoint file */ }
+    }))
+    return results.sort((a, b) => a.name.localeCompare(b.name))
   } catch {
     return []
   }

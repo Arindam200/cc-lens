@@ -1,11 +1,13 @@
 'use client'
 
+import { useState } from 'react'
 import useSWR from 'swr'
 import { TopBar } from '@/components/layout/top-bar'
-import { CostOverTimeChart } from '@/components/costs/cost-over-time-chart'
+import { CostOverTimeChart, type CostWindow } from '@/components/costs/cost-over-time-chart'
 import { CostByProjectChart } from '@/components/costs/cost-by-project-chart'
 import { ModelTokenTable } from '@/components/costs/model-token-table'
 import { CacheEfficiencyPanel } from '@/components/costs/cache-efficiency-panel'
+import { BudgetAlertBanner } from '@/components/costs/budget-alert-banner'
 import { formatCost } from '@/lib/decode'
 import { PRICING } from '@/lib/pricing'
 import type { CostAnalytics } from '@/types/claude'
@@ -19,12 +21,17 @@ const fetcher = (url: string) =>
   fetch(url).then(r => { if (!r.ok) throw new Error(`API error ${r.status}`); return r.json() })
 
 export default function CostsPage() {
-  const { data, error, isLoading } = useSWR<CostAnalytics>('/api/costs', fetcher, { refreshInterval: 5_000 })
+  const [costWindow, setCostWindow] = useState<CostWindow>(90)
+  const rangeKey = costWindow === 'all' ? 'all' : `${costWindow}d`
+  const rangeLabel = costWindow === 'all' ? 'All time' : `Last ${costWindow} days`
+  const { data, error, isLoading } = useSWR<CostAnalytics>(`/api/costs?range=${rangeKey}`, fetcher, { refreshInterval: 5_000 })
 
   return (
     <div className="flex flex-col min-h-screen">
       <TopBar title="Costs" subtitle="Estimated spend from ~/.claude/" />
       <div className="p-6 space-y-6">
+
+        <BudgetAlertBanner />
 
         {error && (
           <Alert variant="destructive">
@@ -56,7 +63,7 @@ export default function CostsPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-xs text-muted-foreground">All time spend across all projects</p>
+                  <p className="text-xs text-muted-foreground">{rangeLabel} spend across all projects</p>
                 </CardContent>
               </Card>
 
@@ -70,7 +77,7 @@ export default function CostsPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-xs text-muted-foreground">Saved by prompt caching</p>
+                  <p className="text-xs text-muted-foreground">Saved by prompt caching · {rangeLabel.toLowerCase()}</p>
                 </CardContent>
               </Card>
 
@@ -84,7 +91,7 @@ export default function CostsPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-xs text-muted-foreground">What you would have spent</p>
+                  <p className="text-xs text-muted-foreground">What you would have spent · {rangeLabel.toLowerCase()}</p>
                 </CardContent>
               </Card>
             </div>
@@ -94,10 +101,10 @@ export default function CostsPage() {
               <Card>
                 <CardHeader>
                   <CardTitle>Cost Over Time</CardTitle>
-                  <CardDescription>Daily estimated spend</CardDescription>
+                  <CardDescription>Daily estimated spend · {rangeLabel}</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <CostOverTimeChart daily={data.daily} />
+                  <CostOverTimeChart daily={data.daily} window={costWindow} onWindowChange={setCostWindow} />
                 </CardContent>
               </Card>
             )}
@@ -107,7 +114,7 @@ export default function CostsPage() {
               <Card>
                 <CardHeader>
                   <CardTitle>Cost by Project</CardTitle>
-                  <CardDescription>Spend breakdown across projects</CardDescription>
+                  <CardDescription>Spend breakdown across projects · {rangeLabel}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <CostByProjectChart projects={data.by_project} />
@@ -119,7 +126,7 @@ export default function CostsPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Per-Model Token Breakdown</CardTitle>
-                <CardDescription>Token usage and cost by model</CardDescription>
+                <CardDescription>Token usage and cost by model · {rangeLabel}</CardDescription>
               </CardHeader>
               <CardContent>
                 <ModelTokenTable models={data.models} />
@@ -130,7 +137,7 @@ export default function CostsPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Cache Efficiency</CardTitle>
-                <CardDescription>How much caching is saving you</CardDescription>
+                <CardDescription>How much caching is saving you · {rangeLabel}</CardDescription>
               </CardHeader>
               <CardContent>
                 <CacheEfficiencyPanel models={data.models} totalSavings={data.total_savings} />

@@ -17,17 +17,19 @@ import { Calendar } from '@/components/ui/calendar'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
+import { Input } from '@/components/ui/input'
 import {
   Download,
   Upload,
   Database,
-  Layers,
   History,
   FileJson2,
   AlertTriangle,
   CheckCircle2,
   Loader2,
   CalendarDays,
+  Users,
+  ShieldCheck,
 } from 'lucide-react'
 import { format } from 'date-fns'
 
@@ -39,7 +41,6 @@ const fetcher = (url: string) =>
 
 interface ExportPreview {
   sessionCount: number
-  facetCount: number
   historyEntries: number
   hasStatsCache: boolean
   totalSessionsIndexed: number
@@ -55,8 +56,15 @@ function previewUrl(dateFrom: string, dateTo: string) {
 
 export default function ExportPage() {
   const [exporting, setExporting] = useState(false)
+  const [exportError, setExportError] = useState('')
   const [exportRange, setExportRange] = useState<{ from?: Date; to?: Date }>({})
   const [exportPickerOpen, setExportPickerOpen] = useState(false)
+  const [teamName, setTeamName] = useState('')
+  const [teamEmail, setTeamEmail] = useState('')
+  const [teamMachine, setTeamMachine] = useState('')
+  const [teamTitles, setTeamTitles] = useState(false)
+  const [teamExporting, setTeamExporting] = useState(false)
+  const [teamExportError, setTeamExportError] = useState('')
   const [importDiff, setImportDiff] = useState<ImportDiff | null>(null)
   const [importError, setImportError] = useState('')
   const [importLoading, setImportLoading] = useState(false)
@@ -83,6 +91,7 @@ export default function ExportPage() {
 
   async function handleExport() {
     setExporting(true)
+    setExportError('')
     try {
       const body: Record<string, unknown> = {}
       if (rangeFromStr || rangeToStr) {
@@ -94,6 +103,10 @@ export default function ExportPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
+      if (!res.ok) {
+        const err = await res.json().catch(() => null)
+        throw new Error(err?.error ?? `Export failed (${res.status})`)
+      }
 
       const data = await res.json()
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
@@ -104,8 +117,51 @@ export default function ExportPage() {
       a.download = `cclens-export-${date}.cclens.json`
       a.click()
       URL.revokeObjectURL(url)
+    } catch (e) {
+      setExportError(e instanceof Error ? e.message : String(e))
     } finally {
       setExporting(false)
+    }
+  }
+
+  async function handleTeamExport() {
+    if (!teamName.trim()) return
+    setTeamExporting(true)
+    setTeamExportError('')
+    try {
+      const body: Record<string, unknown> = {
+        memberName: teamName.trim(),
+        redaction: teamTitles ? 'titles' : 'metrics',
+      }
+      if (teamEmail.trim()) body.memberEmail = teamEmail.trim()
+      if (teamMachine.trim()) body.machine = teamMachine.trim()
+      if (rangeFromStr || rangeToStr) {
+        body.dateRange = { from: rangeFromStr || undefined, to: rangeToStr || undefined }
+      }
+
+      const res = await fetch('/api/export/team', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => null)
+        throw new Error(err?.error ?? `Team export failed (${res.status})`)
+      }
+      const data = await res.json()
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      const date = new Date().toISOString().slice(0, 10)
+      const slug = teamName.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-')
+      a.href = url
+      a.download = `${slug}-${date}.cclens-team.json`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      setTeamExportError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setTeamExporting(false)
     }
   }
 
@@ -163,13 +219,13 @@ export default function ExportPage() {
           <div>
             <h2 className="text-lg font-semibold tracking-tight">What will be exported</h2>
             <p className="text-sm text-muted-foreground mt-1">
-              One JSON file includes stats cache, session metadata, facets, and command history. Numbers below respect the optional date range.
+              One JSON file includes stats cache, session metadata, and command history. Numbers below respect the optional date range.
             </p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {previewLoading && !preview ? (
               <>
-                {Array.from({ length: 4 }).map((_, i) => (
+                {Array.from({ length: 3 }).map((_, i) => (
                   <Skeleton key={i} className="h-[104px] rounded-xl" />
                 ))}
               </>
@@ -191,20 +247,6 @@ export default function ExportPage() {
                         ? 'In selected range'
                         : `of ${preview?.totalSessionsIndexed ?? '—'} indexed`}
                     </p>
-                  </CardContent>
-                </Card>
-                <Card className="shadow-sm">
-                  <CardHeader className="pb-2">
-                    <CardDescription className="flex items-center gap-2">
-                      <Layers className="size-4 text-primary" />
-                      Facets
-                    </CardDescription>
-                    <CardTitle className="text-2xl tabular-nums">
-                      {preview?.facetCount ?? '—'}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <p className="text-xs text-muted-foreground">Linked to exported sessions</p>
                   </CardContent>
                 </Card>
                 <Card className="shadow-sm">
@@ -314,6 +356,12 @@ export default function ExportPage() {
               )}
               <div className="mt-auto flex flex-col gap-5">
                 <Separator />
+                {exportError && (
+                  <Alert variant="destructive">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription className="font-mono text-xs">{exportError}</AlertDescription>
+                  </Alert>
+                )}
                 <Button
                   className="w-full sm:w-auto"
                   size="lg"
@@ -459,6 +507,101 @@ export default function ExportPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Team export */}
+        <Card className="shadow-sm border-border/80">
+          <CardHeader>
+            <div className="flex items-start gap-3">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <Users className="size-5" />
+              </div>
+              <div className="space-y-1">
+                <CardTitle>Team export</CardTitle>
+                <CardDescription>
+                  Share a <strong className="text-foreground/90">redacted</strong>{' '}
+                  <code className="rounded bg-muted px-1 py-0.5 text-xs">.cclens-team.json</code> with your team.
+                  Prompts and full project paths are stripped — only usage metrics leave this machine.
+                  Drop everyone&apos;s files in one folder and open the Team page.
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-2xl">
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium leading-none" htmlFor="team-name">Your name</label>
+                <Input
+                  id="team-name"
+                  placeholder="e.g. Arindam"
+                  value={teamName}
+                  onChange={e => setTeamName(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium leading-none" htmlFor="team-email">Email (optional)</label>
+                <Input
+                  id="team-email"
+                  placeholder="for commit attribution"
+                  value={teamEmail}
+                  onChange={e => setTeamEmail(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium leading-none" htmlFor="team-machine">Machine (optional)</label>
+                <Input
+                  id="team-machine"
+                  placeholder="e.g. macbook-pro"
+                  value={teamMachine}
+                  onChange={e => setTeamMachine(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Keeps exports from your laptop and desktop separate on the Team page.
+                </p>
+              </div>
+            </div>
+
+            <label className="flex items-start gap-2.5 text-sm cursor-pointer max-w-2xl">
+              <input
+                type="checkbox"
+                className="mt-0.5 accent-[#d97706]"
+                checked={teamTitles}
+                onChange={e => setTeamTitles(e.target.checked)}
+              />
+              <span>
+                <span className="font-medium">Include session titles</span>
+                <span className="block text-xs text-muted-foreground">
+                  Keeps the first prompt of each session so teammates can tell sessions apart. Off = metrics only.
+                </span>
+              </span>
+            </label>
+
+            {teamExportError && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription className="font-mono text-xs">{teamExportError}</AlertDescription>
+              </Alert>
+            )}
+            <div className="flex items-center gap-3 pt-1">
+              <Button onClick={handleTeamExport} disabled={teamExporting || !teamName.trim()}>
+                {teamExporting ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" />
+                    Preparing…
+                  </>
+                ) : (
+                  <>
+                    <Download className="size-4" />
+                    Download team export
+                  </>
+                )}
+              </Button>
+              <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                <ShieldCheck className="size-3.5 text-emerald-600" />
+                Respects the date range selected above
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   )

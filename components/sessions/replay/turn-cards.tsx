@@ -10,7 +10,18 @@ import type { ReplayTurn, CompactionEvent } from '@/types/claude'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { ChevronDown, ChevronUp, Brain, Clock, Coins } from 'lucide-react'
+import { ChevronDown, ChevronUp, Brain, Clock, Coins, Bot } from 'lucide-react'
+
+function SidechainBadge() {
+  return (
+    <Badge
+      variant="outline"
+      className="text-[11px] px-1.5 py-0 h-5 gap-1 text-purple-700 border-purple-500/30 bg-purple-500/10 dark:text-purple-300"
+    >
+      <Bot className="w-3 h-3" /> subagent
+    </Badge>
+  )
+}
 
 /** Show “Show more” when assistant text exceeds this length (markdown; avoid slicing mid-block). */
 const ASSISTANT_COLLAPSE_THRESHOLD = 900
@@ -60,9 +71,10 @@ export function UserTurnCard({ turn, compactionBefore }: TurnCardProps) {
     <div>
       {compactionBefore && <CompactionCard event={compactionBefore} />}
 
-      <div className="mb-5 flex flex-col items-end gap-1.5">
+      <div className={cn('mb-5 flex flex-col items-end gap-1.5', turn.is_sidechain && 'pl-6 border-l-2 border-purple-500/25')}>
         {/* Timestamp label */}
-        <span className="text-[11px] text-muted-foreground/40 pr-1">
+        <span className="flex items-center gap-2 text-[11px] text-muted-foreground/40 pr-1">
+          {turn.is_sidechain && <SidechainBadge />}
           {new Date(turn.timestamp).toLocaleTimeString()}
         </span>
 
@@ -106,7 +118,7 @@ export function AssistantTurnCard({ turn, turnNumber, toolResults }: TurnCardPro
   const needsExpandToggle = textToShow.length > ASSISTANT_COLLAPSE_THRESHOLD
 
   return (
-    <div className="mb-6 flex flex-col gap-1.5">
+    <div className={cn('mb-6 flex flex-col gap-1.5', turn.is_sidechain && 'pl-6 border-l-2 border-purple-500/25')}>
       {/* Header row */}
       <div className="flex items-center gap-2 flex-wrap">
         <div className="flex items-center gap-1.5">
@@ -115,6 +127,7 @@ export function AssistantTurnCard({ turn, turnNumber, toolResults }: TurnCardPro
           </div>
           <span className="text-xs font-semibold text-primary/80">Claude</span>
         </div>
+        {turn.is_sidechain && <SidechainBadge />}
         <Badge variant="outline" className="text-[11px] px-1.5 py-0 h-5 font-mono">
           {modelShort}
         </Badge>

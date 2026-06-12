@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer } from 'recharts'
 import { formatCost } from '@/lib/decode'
 import type { DailyCost } from '@/types/claude'
@@ -31,16 +31,17 @@ function shortModel(m: string): string {
 
 interface Props {
   daily: DailyCost[]
+  window: Window
+  onWindowChange: (window: Window) => void
 }
 
-type Window = 30 | 90 | 365
+export type CostWindow = 30 | 90 | 'all'
+type Window = CostWindow
 
-export function CostOverTimeChart({ daily }: Props) {
-  const [window, setWindow] = useState<Window>(90)
-
+export function CostOverTimeChart({ daily, window, onWindowChange }: Props) {
   const { data, models } = useMemo(() => {
     const sorted = [...daily].sort((a, b) => a.date.localeCompare(b.date))
-    const sliced = sorted.slice(-window)
+    const sliced = sorted
     const modelSet = new Set<string>()
     for (const d of sliced) Object.keys(d.costs ?? {}).forEach(m => modelSet.add(m))
     const models = [...modelSet]
@@ -52,20 +53,20 @@ export function CostOverTimeChart({ daily }: Props) {
       })),
       models,
     }
-  }, [daily, window])
+  }, [daily])
 
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-[13px] font-bold text-muted-foreground uppercase tracking-widest">Cost Over Time</h3>
         <div className="flex gap-1">
-          {([30, 90, 365] as Window[]).map(w => (
+          {([30, 90, 'all'] as Window[]).map(w => (
             <button
               key={w}
-              onClick={() => setWindow(w)}
+              onClick={() => onWindowChange(w)}
               className={`px-2 py-0.5 rounded text-[12px] transition-colors ${window === w ? 'bg-primary text-black font-bold' : 'text-muted-foreground hover:text-foreground border border-border'}`}
             >
-              {w === 365 ? 'All' : `${w}d`}
+              {w === 'all' ? 'All' : `${w}d`}
             </button>
           ))}
         </div>

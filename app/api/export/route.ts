@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import { readStatsCache, getSessions, readAllFacets, readHistory } from '@/lib/claude-reader'
-import type { ExportPayload, Facet, SessionMeta } from '@/types/claude'
+import { readStatsCache, getSessions, readHistory } from '@/lib/claude-reader'
+import type { ExportPayload, SessionMeta } from '@/types/claude'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,11 +19,6 @@ function filterSessionsByDateRange(
   })
 }
 
-function facetsForSessions(facets: Facet[], sessions: SessionMeta[]) {
-  const sessionIds = new Set(sessions.map(s => s.session_id))
-  return facets.filter(f => sessionIds.has(f.session_id))
-}
-
 /** Preview counts for the export UI (optional date filter via query params). */
 export async function GET(req: Request) {
   const url = new URL(req.url)
@@ -31,19 +26,16 @@ export async function GET(req: Request) {
   const to = url.searchParams.get('to') || undefined
   const dateRange = from || to ? { from, to } : undefined
 
-  const [stats, sessions, facets, history] = await Promise.all([
+  const [stats, sessions, history] = await Promise.all([
     readStatsCache(),
     getSessions(),
-    readAllFacets(),
     readHistory(10_000),
   ])
 
   const filteredSessions = filterSessionsByDateRange(sessions, dateRange)
-  const filteredFacets = facetsForSessions(facets, filteredSessions)
 
   return NextResponse.json({
     sessionCount: filteredSessions.length,
-    facetCount: filteredFacets.length,
     historyEntries: history.length,
     hasStatsCache: stats !== null,
     totalSessionsIndexed: sessions.length,
@@ -54,22 +46,21 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}))
   const { dateRange } = body as { dateRange?: { from?: string; to?: string } }
 
-  const [stats, sessions, facets, history] = await Promise.all([
+  const [stats, sessions, history] = await Promise.all([
     readStatsCache(),
     getSessions(),
-    readAllFacets(),
     readHistory(10_000),
   ])
 
   const filteredSessions = filterSessionsByDateRange(sessions, dateRange)
-  const filteredFacets = facetsForSessions(facets, filteredSessions)
 
+  // facets stays in the payload (empty) so older importers keep working
   const payload: ExportPayload = {
     exportedAt: new Date().toISOString(),
     version: '1.0.0',
     stats,
     sessions: filteredSessions,
-    facets: filteredFacets,
+    facets: [],
     history,
   }
 

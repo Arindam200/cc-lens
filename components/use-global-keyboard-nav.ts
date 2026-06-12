@@ -15,7 +15,7 @@ const G_MAP: Record<string, string> = {
   e: '/export',
   l: '/plans',
   y: '/history',
-  o: '/todos',
+  o: '/workspace',
 }
 
 function isTyping(): boolean {

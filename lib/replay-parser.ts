@@ -24,6 +24,7 @@ export async function parseSessionReplay(
   const summaries: SummaryEvent[] = []
 
   let slug: string | undefined
+  let aiTitle: string | undefined
   let version: string | undefined
   let gitBranch: string | undefined
   let totalCost = 0
@@ -36,6 +37,8 @@ export async function parseSessionReplay(
     }
     // Grab metadata from any line
     if (!slug && l.slug)       slug = l.slug
+    // ai-title lines repeat as the title is refined; the last one wins
+    if (l.type === 'ai-title' && l.aiTitle) aiTitle = l.aiTitle
     if (!version && l.version) version = l.version
     if (!gitBranch && l.gitBranch && l.gitBranch !== 'HEAD') gitBranch = l.gitBranch
   }
@@ -98,6 +101,7 @@ export async function parseSessionReplay(
         uuid:        l.uuid ?? '',
         parentUuid:  l.parentUuid ?? null,
         type:        'user',
+        is_sidechain: l.isSidechain === true || undefined,
         timestamp:   l.timestamp ?? '',
         text:        text.trim(),
         tool_results: tool_results.length > 0 ? tool_results : undefined,
@@ -147,6 +151,7 @@ export async function parseSessionReplay(
         uuid:             l.uuid ?? '',
         parentUuid:       l.parentUuid ?? null,
         type:             'assistant',
+        is_sidechain:     l.isSidechain === true || undefined,
         timestamp:        l.timestamp ?? '',
         model,
         usage,
@@ -161,5 +166,5 @@ export async function parseSessionReplay(
     }
   }
 
-  return { session_id: sessionId, slug, version, git_branch: gitBranch, turns, compactions, summaries, total_cost: totalCost }
+  return { session_id: sessionId, slug, ai_title: aiTitle, version, git_branch: gitBranch, turns, compactions, summaries, total_cost: totalCost }
 }

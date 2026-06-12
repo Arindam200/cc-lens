@@ -23,7 +23,7 @@ const PAGES = [
   { label: 'Tools',     href: '/tools'     },
   { label: 'Activity',  href: '/activity'  },
   { label: 'History',   href: '/history'   },
-  { label: 'Todos',     href: '/todos'     },
+  { label: 'Workspace', href: '/workspace' },
   { label: 'Plans',     href: '/plans'     },
   { label: 'Memory',    href: '/memory'    },
   { label: 'Settings',  href: '/settings'  },

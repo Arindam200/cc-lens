@@ -1,8 +1,8 @@
 'use client'
 
 import useSWR from 'swr'
+import Link from 'next/link'
 import { TopBar } from '@/components/layout/top-bar'
-import type { SkillInfo, PluginInfo } from '@/lib/claude-reader'
 
 const fetcher = (url: string) =>
   fetch(url).then(r => { if (!r.ok) throw new Error(`API error ${r.status}`); return r.json() })
@@ -77,8 +77,6 @@ export default function SettingsPage() {
   const { data, error, isLoading } = useSWR<{
     settings: Record<string, unknown>
     storageBytes: number
-    skills: SkillInfo[]
-    plugins: PluginInfo[]
   }>('/api/settings', fetcher, { refreshInterval: 30_000 })
 
   return (
@@ -137,49 +135,12 @@ export default function SettingsPage() {
               </Section>
             )}
 
-            <Section title={`Skills (${data.skills.length})`}>
-              {data.skills.length === 0 ? (
-                <p className="text-muted-foreground/60 text-sm font-mono">No skills found in ~/.claude/skills/</p>
-              ) : (
-                <div className="grid gap-2">
-                  {data.skills.map(skill => (
-                    <div key={skill.name} className="border border-border rounded p-3 flex items-start gap-3">
-                      <span className="shrink-0 w-2 h-2 mt-1.5 rounded-full bg-primary" />
-                      <div className="min-w-0">
-                        <p className="text-primary font-mono text-sm font-bold">{skill.name}</p>
-                        {skill.description && (
-                          <p className="text-foreground text-xs mt-0.5">{skill.description}</p>
-                        )}
-                        {skill.triggers && (
-                          <p className="text-muted-foreground text-xs mt-1 leading-relaxed line-clamp-2">{skill.triggers}</p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+            <Section title="Customizations">
+              <p className="text-sm text-muted-foreground">
+                Skills, plugins, agents, commands, rules, and hooks now live in the{' '}
+                <Link href="/workspace" className="text-primary hover:underline">Workspace</Link> page.
+              </p>
             </Section>
-
-            {data.plugins.length > 0 && (
-              <Section title={`Plugins (${data.plugins.length})`}>
-                <div className="grid gap-2">
-                  {data.plugins.map((plugin, i) => (
-                    <div key={i} className="border border-border rounded p-3 flex items-center justify-between gap-4">
-                      <div className="min-w-0">
-                        <p className="text-primary font-mono text-sm font-bold">{plugin.id}</p>
-                        <p className="text-muted-foreground text-xs mt-0.5">scope: {plugin.scope}</p>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <span className="text-emerald-700 dark:text-[#6ee7b7] font-mono text-xs">v{plugin.version}</span>
-                        <p className="text-muted-foreground text-xs mt-0.5">
-                          {new Date(plugin.installedAt).toLocaleDateString()}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </Section>
-            )}
           </>
         )}
       </div>

@@ -96,8 +96,8 @@ export default function SessionDetailPage({ params }: { params: Promise<{ id: st
     <div className="flex flex-col min-h-screen">
       {/* Header */}
       <TopBar
-        title={`${projectName} · ${replay.slug ?? id.slice(0, 8)}`}
-        subtitle={`${replay.git_branch ?? '?'} · v${replay.version ?? '?'} · ${formatCost(replay.total_cost ?? 0)}`}
+        title={replay.ai_title ?? `${projectName} · ${replay.slug ?? id.slice(0, 8)}`}
+        subtitle={`${projectName} · ${replay.git_branch ?? '?'} · v${replay.version ?? '?'} · ${formatCost(replay.total_cost ?? 0)}`}
       />
 
       {/* Stats cards — match project detail page */}

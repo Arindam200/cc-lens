@@ -97,13 +97,13 @@ export function OverviewConversationTable({ sessions }: Props) {
 
             return (
               <TableRow key={s.session_id}>
-                <TableCell className="font-mono text-muted-foreground">
+                <TableCell className={s.ai_title ? 'max-w-[260px]' : 'font-mono text-muted-foreground'}>
                   <Link
                     href={`/sessions/${s.session_id}`}
-                    className="hover:text-primary transition-colors"
-                    title={s.session_id}
+                    className="hover:text-primary transition-colors truncate block"
+                    title={s.ai_title ?? s.session_id}
                   >
-                    {shortId(s.session_id)}
+                    {s.ai_title ?? shortId(s.session_id)}
                   </Link>
                 </TableCell>
                 <TableCell>

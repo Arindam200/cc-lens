@@ -47,6 +47,7 @@ export function SessionSidebar({ replay, meta }: Props) {
   const maxToolCount = topTools[0]?.[1] ?? 1
 
   const assistantTurns = replay.turns.filter(t => t.type === 'assistant')
+  const sidechainTurns = replay.turns.filter(t => t.is_sidechain).length
 
   const tokenBreakdown = [
     { label: 'Input', val: totalInput, color: 'var(--viz-sky)', bg: 'bg-blue-700 dark:bg-blue-400' },
@@ -187,6 +188,12 @@ export function SessionSidebar({ replay, meta }: Props) {
             <span className="w-16 shrink-0 text-xs text-muted-foreground/50">Turns</span>
             <span className="text-xs font-semibold text-foreground/80">{assistantTurns.length}</span>
           </div>
+          {sidechainTurns > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="w-16 shrink-0 text-xs text-muted-foreground/50">Subagent</span>
+              <span className="text-xs font-semibold text-purple-700 dark:text-purple-300">{sidechainTurns} turns</span>
+            </div>
+          )}
           {meta && (
             <>
               {meta.duration_minutes > 0 && (
