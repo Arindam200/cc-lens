@@ -20,7 +20,6 @@ interface TaskItem {
 
 interface TaskSession {
   sessionId: string
-  path: string
   tasks: TaskItem[]
   mtime: string
   project: string | null
@@ -115,8 +114,8 @@ function SessionCard({ session }: { session: TaskSession }) {
         </div>
       </div>
       <div className="border-t border-border/60 bg-muted/25 dark:bg-muted/10 px-5 py-3 md:px-6">
-        {session.tasks.map(task => (
-          <TaskRow key={task.id ?? task.content} task={task} />
+        {session.tasks.map((task, index) => (
+          <TaskRow key={task.id ?? `${task.content}-${index}`} task={task} />
         ))}
       </div>
     </div>

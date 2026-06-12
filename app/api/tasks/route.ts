@@ -25,7 +25,13 @@ export async function GET() {
   return NextResponse.json({
     sessions: sessions.map((s) => {
       const slug = projectBySession.get(s.sessionId)
-      return { ...s, project: slug ? slugToPath(slug) : null }
+      // Allowlist fields so server filesystem paths never reach the client
+      return {
+        sessionId: s.sessionId,
+        tasks: s.tasks,
+        mtime: s.mtime,
+        project: slug ? slugToPath(slug) : null,
+      }
     }),
   })
 }

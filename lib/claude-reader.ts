@@ -577,7 +577,12 @@ export async function readTaskSessions(): Promise<TaskSession[]> {
         }
         if (!tasks.length) return
 
-        tasks.sort((a, b) => Number(a.id ?? 0) - Number(b.id ?? 0))
+        tasks.sort((a, b) => {
+          const an = parseInt(a.id ?? '', 10) || 0
+          const bn = parseInt(b.id ?? '', 10) || 0
+          if (an !== bn) return an - bn
+          return (a.id ?? a.content).localeCompare(b.id ?? b.content)
+        })
         results.push({
           sessionId: session.name,
           path: sessionDir,
