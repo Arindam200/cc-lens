@@ -511,6 +511,92 @@ export async function readPlans(): Promise<PlanFile[]> {
   }
 }
 
+// ─── Tasks ───────────────────────────────────────────────────────────────────
+
+export interface TaskItem {
+  id?: string
+  content: string
+  description?: string
+  status?: string
+  activeForm?: string
+}
+
+export interface TaskSession {
+  sessionId: string
+  path: string
+  tasks: TaskItem[]
+  mtime: string
+}
+
+interface RawTaskFile {
+  id?: string
+  subject?: string
+  description?: string
+  activeForm?: string
+  status?: string
+  [key: string]: unknown
+}
+
+/** Current task storage written by the TaskCreate / TaskUpdate tools that
+ *  replaced TodoWrite: ~/.claude/tasks/<session-id>/<taskId>.json, one file
+ *  per task with {id, subject, description, status, ...}. Each session
+ *  directory is surfaced as one TaskSession; mtime is the latest task mtime
+ *  in the session so recency sorting stays meaningful. */
+export async function readTaskSessions(): Promise<TaskSession[]> {
+  const results: TaskSession[] = []
+  try {
+    const dir = claudePath('tasks')
+    const sessions = await fs.readdir(dir, { withFileTypes: true })
+    await mapPool(sessions.filter((d) => d.isDirectory()), 8, async (session) => {
+      try {
+        const sessionDir = path.join(dir, session.name)
+        const files = (await fs.readdir(sessionDir)).filter((x) => x.endsWith('.json'))
+        if (!files.length) return
+
+        const tasks: TaskItem[] = []
+        let latestMtime = new Date(0)
+
+        for (const f of files) {
+          try {
+            const fullPath = path.join(sessionDir, f)
+            const [raw, stat] = await Promise.all([
+              fs.readFile(fullPath, 'utf-8'),
+              fs.stat(fullPath),
+            ])
+            const task = JSON.parse(raw) as RawTaskFile
+            if (!task || task.status === 'deleted') continue
+            tasks.push({
+              id: task.id,
+              content: task.subject ?? task.description ?? f,
+              description: task.description,
+              status: task.status,
+              activeForm: task.activeForm,
+            })
+            if (stat.mtime > latestMtime) latestMtime = stat.mtime
+          } catch { /* skip unreadable task */ }
+        }
+        if (!tasks.length) return
+
+        tasks.sort((a, b) => {
+          const an = parseInt(a.id ?? '', 10) || 0
+          const bn = parseInt(b.id ?? '', 10) || 0
+          if (an !== bn) return an - bn
+          return (a.id ?? a.content).localeCompare(b.id ?? b.content)
+        })
+        results.push({
+          sessionId: session.name,
+          path: sessionDir,
+          tasks,
+          mtime: latestMtime.toISOString(),
+        })
+      } catch { /* skip unreadable session dir */ }
+    })
+    return results.sort((a, b) => b.mtime.localeCompare(a.mtime))
+  } catch {
+    return []
+  }
+}
+
 // ─── History ─────────────────────────────────────────────────────────────────
 
 export async function readHistory(limit = 200): Promise<HistoryEntry[]> {
