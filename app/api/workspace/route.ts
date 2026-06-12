@@ -21,14 +21,25 @@ export async function GET() {
       readSettings(),
     ])
 
-  // Hook config lives in settings.json as { event: [{ matcher, hooks: [...] }] }
-  const hooksRaw = settings.hooks as Record<string, Array<{ matcher?: string; hooks?: unknown[] }>> | undefined
+  // Hook config lives in settings.json as { event: [{ matcher, hooks: [...] }] }.
+  // settings.json is user-edited, so tolerate any shape and skip invalid events.
+  const hooksValue = settings.hooks
+  const hooksRaw =
+    hooksValue && typeof hooksValue === 'object' && !Array.isArray(hooksValue)
+      ? (hooksValue as Record<string, unknown>)
+      : undefined
   const hooks = hooksRaw
-    ? Object.entries(hooksRaw).map(([event, matchers]) => ({
-        event,
-        matchers: (matchers ?? []).length,
-        commands: (matchers ?? []).reduce((sum, m) => sum + (m.hooks?.length ?? 0), 0),
-      }))
+    ? Object.entries(hooksRaw).flatMap(([event, matchers]) => {
+        if (!Array.isArray(matchers)) return []
+        return [{
+          event,
+          matchers: matchers.length,
+          commands: matchers.reduce(
+            (sum: number, m) => sum + (Array.isArray(m?.hooks) ? m.hooks.length : 0),
+            0
+          ),
+        }]
+      })
     : []
 
   return NextResponse.json({

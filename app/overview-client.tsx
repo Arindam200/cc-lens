@@ -131,8 +131,9 @@ export function OverviewClient() {
   const projectCount = projects.length
 
   const usingCustom = !!(customRange.from && customRange.to)
+  // +1 so the range is inclusive of both endpoints (same-day selection = 1 day)
   const chartDays = usingCustom
-    ? Math.ceil((customRange.to!.getTime() - customRange.from!.getTime()) / (24 * 60 * 60 * 1000))
+    ? Math.ceil((customRange.to!.getTime() - customRange.from!.getTime()) / (24 * 60 * 60 * 1000)) + 1
     : datePreset === '7d' ? 7 : datePreset === '30d' ? 30 : 90
   const effectiveDateFrom = usingCustom
     ? format(customRange.from!, 'MM/dd/yyyy')
@@ -144,6 +145,16 @@ export function OverviewClient() {
   const pickerLabel = usingCustom
     ? `${format(customRange.from!, 'MMM d')} – ${format(customRange.to!, 'MMM d, yyyy')}`
     : 'Pick a date'
+
+  // Error has to be checked before the loading skeleton: on a failed first
+  // load `data` stays undefined forever, which would pin us on the skeleton.
+  if (error) {
+    return (
+      <div className="px-6 py-6 text-destructive text-sm font-mono">
+        ✗ error loading data: {String(error)}
+      </div>
+    )
+  }
 
   // ── Loading ──────────────────────────────────────────────────────────────
   if (isLoading || !data || !data.computed) {
@@ -163,14 +174,6 @@ export function OverviewClient() {
           <Skeleton className="h-72 rounded-xl" />
           <Skeleton className="h-72 rounded-xl" />
         </div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="px-6 py-6 text-destructive text-sm font-mono">
-        ✗ error loading data: {String(error)}
       </div>
     )
   }

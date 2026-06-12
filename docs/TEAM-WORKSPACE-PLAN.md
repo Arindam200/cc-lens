@@ -46,7 +46,8 @@ What they do not cover:
   dashboards cannot answer.
 
 ### 4. Privacy-first sync
-- Reuse the existing `.ccboard.json` export format as the wire format.
+- The wire format is the redacted `.cclens-team.json` member export produced
+  by `/api/export/team` (shipped in v1).
 - A small self-hosted hub (single binary / docker) that members push exports
   to; merge is additive-only (the import flow already computes diffs and never
   writes to `~/.claude/`).
@@ -57,7 +58,7 @@ What they do not cover:
 
 ## Architecture sketch
 
-```
+```text
 member machine                       team hub (self-hosted)
 ┌──────────────────┐    push (opt-in)  ┌─────────────────────┐
 │ CC Lens (local)  │ ───────────────▶ │ merge store (jsonl)  │

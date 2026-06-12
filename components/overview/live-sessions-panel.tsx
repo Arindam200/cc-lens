@@ -49,7 +49,7 @@ export function LiveSessionsPanel() {
               Live Sessions
             </CardTitle>
             <CardDescription>
-              {live.length} Claude Code {live.length === 1 ? 'process' : 'processes'} running right now
+              {live.length} live Claude Code {live.length === 1 ? 'process' : 'processes'} detected
             </CardDescription>
           </div>
           <Radio className="w-4 h-4 text-muted-foreground mt-0.5" />

@@ -24,21 +24,21 @@ export interface WrappedStats {
   cache_hit_rate: number
 }
 
+/** Days since epoch for a yyyy-MM-dd string; avoids local/UTC mixing around DST. */
+function epochDay(day: string): number {
+  return Math.floor(new Date(day + 'T00:00:00Z').getTime() / 86_400_000)
+}
+
 function longestStreak(days: string[]): number {
   const sorted = Array.from(new Set(days)).sort()
   let best = 0
   let run = 0
-  let prev: string | null = null
+  let prev: number | null = null
   for (const day of sorted) {
-    if (prev) {
-      const next = new Date(prev)
-      next.setDate(next.getDate() + 1)
-      run = next.toISOString().slice(0, 10) === day ? run + 1 : 1
-    } else {
-      run = 1
-    }
+    const d = epochDay(day)
+    run = prev !== null && d === prev + 1 ? run + 1 : 1
     best = Math.max(best, run)
-    prev = day
+    prev = d
   }
   return best
 }
@@ -61,6 +61,7 @@ export async function GET(req: Request) {
   let inputTok = 0
   let outputTok = 0
   let cacheRead = 0
+  let cacheWrite = 0
 
   for (const s of sessions) {
     days.push(s.start_time.slice(0, 10))
@@ -69,6 +70,7 @@ export async function GET(req: Request) {
     inputTok += s.input_tokens
     outputTok += s.output_tokens
     cacheRead += s.cache_read_input_tokens ?? 0
+    cacheWrite += s.cache_creation_input_tokens ?? 0
 
     const proj = projectDisplayName(s.project_path)
     projects.set(proj, (projects.get(proj) ?? 0) + 1)
@@ -96,7 +98,7 @@ export async function GET(req: Request) {
     sessions: sessions.length,
     messages,
     total_cost: cost,
-    total_tokens: inputTok + outputTok + cacheRead,
+    total_tokens: inputTok + outputTok + cacheRead + cacheWrite,
     output_tokens: outputTok,
     active_days: new Set(days).size,
     longest_streak_days: longestStreak(days),

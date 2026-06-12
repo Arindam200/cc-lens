@@ -38,7 +38,7 @@ don't over-engineer sharing of React code early.
 
 ## Data model (Drizzle/Postgres)
 
-```
+```text
 orgs            id, slug, name, plan, retention_days, created_at
 users           id, email, name, github_id, created_at
 org_members     org_id, user_id, role (owner|admin|viewer)

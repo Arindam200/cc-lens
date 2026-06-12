@@ -11,10 +11,10 @@ export const dynamic = 'force-dynamic'
 // a shared folder by hand. The receiving instance writes into the same team
 // dir the /team page reads, so push and file-drop coexist.
 //
-// Auth: if CC_LENS_TEAM_TOKEN is set on the hub, pushes must carry it as a
-// bearer token. Without the env var, pushes are accepted from anyone who can
-// reach the server — fine on localhost, set the token before binding to a
-// network interface.
+// Auth: pushes must carry CC_LENS_TEAM_TOKEN as a bearer token. The endpoint
+// fails closed — if no token is configured, pushes are rejected unless
+// CC_LENS_TEAM_INSECURE_LOCAL=1 explicitly opts into tokenless mode (only
+// sensible on localhost or a trusted LAN/VPN).
 
 function slugify(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 64) || 'member'
@@ -34,11 +34,17 @@ function isValidPayload(obj: unknown): obj is TeamExportPayload {
 
 export async function POST(req: Request) {
   const token = process.env.CC_LENS_TEAM_TOKEN
+  const insecureLocal = ['1', 'true'].includes(process.env.CC_LENS_TEAM_INSECURE_LOCAL ?? '')
   if (token) {
     const auth = req.headers.get('authorization') ?? ''
     if (auth !== `Bearer ${token}`) {
       return NextResponse.json({ error: 'invalid or missing token' }, { status: 401 })
     }
+  } else if (!insecureLocal) {
+    return NextResponse.json(
+      { error: 'push disabled: set CC_LENS_TEAM_TOKEN on the hub (or CC_LENS_TEAM_INSECURE_LOCAL=1 for tokenless local use)' },
+      { status: 401 }
+    )
   }
 
   const body = await req.json().catch(() => null)

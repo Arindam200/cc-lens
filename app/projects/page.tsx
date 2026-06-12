@@ -36,7 +36,10 @@ export default function ProjectsPage() {
     range_days: number
     trends: ProjectTrend[]
   }>(
-    `/api/projects/trends?range=${trendRange}`, fetcher, { refreshInterval: 5_000 }
+    // Trends walks every session server-side; only fetch/poll while the tab is open
+    activeTab === 'trends' ? `/api/projects/trends?range=${trendRange}` : null,
+    fetcher,
+    { refreshInterval: 5_000 }
   )
   const [sort, setSort] = useState<SortKey>('last_active')
   const [search, setSearch] = useState('')

@@ -56,12 +56,15 @@ function previewUrl(dateFrom: string, dateTo: string) {
 
 export default function ExportPage() {
   const [exporting, setExporting] = useState(false)
+  const [exportError, setExportError] = useState('')
   const [exportRange, setExportRange] = useState<{ from?: Date; to?: Date }>({})
   const [exportPickerOpen, setExportPickerOpen] = useState(false)
   const [teamName, setTeamName] = useState('')
   const [teamEmail, setTeamEmail] = useState('')
+  const [teamMachine, setTeamMachine] = useState('')
   const [teamTitles, setTeamTitles] = useState(false)
   const [teamExporting, setTeamExporting] = useState(false)
+  const [teamExportError, setTeamExportError] = useState('')
   const [importDiff, setImportDiff] = useState<ImportDiff | null>(null)
   const [importError, setImportError] = useState('')
   const [importLoading, setImportLoading] = useState(false)
@@ -88,6 +91,7 @@ export default function ExportPage() {
 
   async function handleExport() {
     setExporting(true)
+    setExportError('')
     try {
       const body: Record<string, unknown> = {}
       if (rangeFromStr || rangeToStr) {
@@ -99,6 +103,10 @@ export default function ExportPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
+      if (!res.ok) {
+        const err = await res.json().catch(() => null)
+        throw new Error(err?.error ?? `Export failed (${res.status})`)
+      }
 
       const data = await res.json()
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
@@ -109,6 +117,8 @@ export default function ExportPage() {
       a.download = `cclens-export-${date}.cclens.json`
       a.click()
       URL.revokeObjectURL(url)
+    } catch (e) {
+      setExportError(e instanceof Error ? e.message : String(e))
     } finally {
       setExporting(false)
     }
@@ -117,12 +127,14 @@ export default function ExportPage() {
   async function handleTeamExport() {
     if (!teamName.trim()) return
     setTeamExporting(true)
+    setTeamExportError('')
     try {
       const body: Record<string, unknown> = {
         memberName: teamName.trim(),
         redaction: teamTitles ? 'titles' : 'metrics',
       }
       if (teamEmail.trim()) body.memberEmail = teamEmail.trim()
+      if (teamMachine.trim()) body.machine = teamMachine.trim()
       if (rangeFromStr || rangeToStr) {
         body.dateRange = { from: rangeFromStr || undefined, to: rangeToStr || undefined }
       }
@@ -132,6 +144,10 @@ export default function ExportPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
+      if (!res.ok) {
+        const err = await res.json().catch(() => null)
+        throw new Error(err?.error ?? `Team export failed (${res.status})`)
+      }
       const data = await res.json()
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
       const url = URL.createObjectURL(blob)
@@ -142,6 +158,8 @@ export default function ExportPage() {
       a.download = `${slug}-${date}.cclens-team.json`
       a.click()
       URL.revokeObjectURL(url)
+    } catch (e) {
+      setTeamExportError(e instanceof Error ? e.message : String(e))
     } finally {
       setTeamExporting(false)
     }
@@ -338,6 +356,12 @@ export default function ExportPage() {
               )}
               <div className="mt-auto flex flex-col gap-5">
                 <Separator />
+                {exportError && (
+                  <Alert variant="destructive">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription className="font-mono text-xs">{exportError}</AlertDescription>
+                  </Alert>
+                )}
                 <Button
                   className="w-full sm:w-auto"
                   size="lg"
@@ -522,6 +546,18 @@ export default function ExportPage() {
                   onChange={e => setTeamEmail(e.target.value)}
                 />
               </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium leading-none" htmlFor="team-machine">Machine (optional)</label>
+                <Input
+                  id="team-machine"
+                  placeholder="e.g. macbook-pro"
+                  value={teamMachine}
+                  onChange={e => setTeamMachine(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Keeps exports from your laptop and desktop separate on the Team page.
+                </p>
+              </div>
             </div>
 
             <label className="flex items-start gap-2.5 text-sm cursor-pointer max-w-2xl">
@@ -539,6 +575,12 @@ export default function ExportPage() {
               </span>
             </label>
 
+            {teamExportError && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription className="font-mono text-xs">{teamExportError}</AlertDescription>
+              </Alert>
+            )}
             <div className="flex items-center gap-3 pt-1">
               <Button onClick={handleTeamExport} disabled={teamExporting || !teamName.trim()}>
                 {teamExporting ? (

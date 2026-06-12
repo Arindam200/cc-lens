@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getAllParsedSessions } from '@/lib/claude-reader'
-import { estimateCostFromUsage } from '@/lib/pricing'
+import { sessionCost } from '@/lib/insights'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,12 +15,7 @@ export async function GET(
     return NextResponse.json({ error: 'Session not found' }, { status: 404 })
   }
 
-  const estimated_cost = estimateCostFromUsage('claude-opus-4-7', {
-    input_tokens: resolved.input_tokens ?? 0,
-    output_tokens: resolved.output_tokens ?? 0,
-    cache_creation_input_tokens: resolved.cache_creation_input_tokens ?? 0,
-    cache_read_input_tokens: resolved.cache_read_input_tokens ?? 0,
-  })
+  const estimated_cost = sessionCost(resolved)
 
   return NextResponse.json({
     session: {

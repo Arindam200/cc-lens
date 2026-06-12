@@ -26,9 +26,11 @@ export interface DigestResponse {
 }
 
 function dayCutoff(daysAgo: number, now: Date): string {
+  // Stay in UTC throughout: toISOString() converts back to UTC, so mixing in
+  // local setters would shift the cutoff by a day in non-UTC timezones.
   const d = new Date(now)
-  d.setHours(0, 0, 0, 0)
-  d.setDate(d.getDate() - (daysAgo - 1))
+  d.setUTCHours(0, 0, 0, 0)
+  d.setUTCDate(d.getUTCDate() - (daysAgo - 1))
   return d.toISOString().slice(0, 10)
 }
 
@@ -71,8 +73,9 @@ export async function GET(req: Request) {
   }
 
   const sessions = await getAllParsedSessions()
-  const inWindow = sessions.filter(s => s.start_time.slice(0, 10) >= since)
+  const inWindow = sessions.filter(s => s.start_time && s.start_time.slice(0, 10) >= since)
   const inPrev = sessions.filter(s => {
+    if (!s.start_time) return false
     const d = s.start_time.slice(0, 10)
     return d >= prevSince && d < since
   })
@@ -91,7 +94,7 @@ export async function GET(req: Request) {
     budget = {
       monthly_budget_usd: config.monthly_budget_usd,
       month_to_date_cost: sessions
-        .filter(s => s.start_time.slice(0, 10) >= monthStart)
+        .filter(s => s.start_time && s.start_time.slice(0, 10) >= monthStart)
         .reduce((sum, s) => sum + sessionCost(s), 0),
     }
   }

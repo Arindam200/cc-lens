@@ -24,8 +24,20 @@ export async function POST(req: Request) {
 
   const sessions = await getAllParsedSessions()
 
-  const fromMs = body.dateRange?.from ? new Date(body.dateRange.from).getTime() : null
-  const toMs = body.dateRange?.to ? new Date(body.dateRange.to + 'T23:59:59.999Z').getTime() : null
+  // Date strings come from the UI as yyyy-MM-dd in the user's local timezone;
+  // build local-day boundaries (no trailing Z) so midnight-adjacent sessions
+  // land in the day the user actually saw them.
+  const fromMs = body.dateRange?.from ? new Date(body.dateRange.from + 'T00:00:00').getTime() : null
+  const toMs = body.dateRange?.to ? new Date(body.dateRange.to + 'T23:59:59.999').getTime() : null
+  if (fromMs !== null && Number.isNaN(fromMs)) {
+    return NextResponse.json({ error: 'invalid dateRange.from' }, { status: 400 })
+  }
+  if (toMs !== null && Number.isNaN(toMs)) {
+    return NextResponse.json({ error: 'invalid dateRange.to' }, { status: 400 })
+  }
+  if (fromMs !== null && toMs !== null && fromMs > toMs) {
+    return NextResponse.json({ error: 'dateRange.from is after dateRange.to' }, { status: 400 })
+  }
   const filtered = sessions.filter(s => {
     if (!s.start_time) return true
     const t = new Date(s.start_time).getTime()

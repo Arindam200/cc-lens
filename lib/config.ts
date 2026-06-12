@@ -48,6 +48,10 @@ export async function updateConfig(updates: Partial<Record<keyof CcLensConfig, u
     else delete existing.monthly_budget_usd
   }
   await fs.mkdir(configDir(), { recursive: true })
-  await fs.writeFile(configFile(), JSON.stringify(existing, null, 2) + '\n', 'utf-8')
+  // Write-then-rename so a crash mid-write can't truncate the live config
+  const file = configFile()
+  const tmp = `${file}.tmp`
+  await fs.writeFile(tmp, JSON.stringify(existing, null, 2) + '\n', 'utf-8')
+  await fs.rename(tmp, file)
   return readConfig()
 }

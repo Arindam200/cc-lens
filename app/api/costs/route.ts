@@ -138,21 +138,21 @@ export async function GET(req: Request) {
   // ── Cost by project ────────────────────────────────────────────────────────
   const projectMap = new Map<string, { cost: number; input: number; output: number }>()
   for (const s of filteredSessions) {
-    const pp = s.project_path ?? ''
-    const slug = pp
+    const slug = s.project_path ?? ''
     const existing = projectMap.get(slug) ?? { cost: 0, input: 0, output: 0 }
-    const cost = estimateTotalCostFromModel('claude-opus-4-7', {
-      inputTokens: s.input_tokens ?? 0,
-      outputTokens: s.output_tokens ?? 0,
-      cacheCreationInputTokens: s.cache_creation_input_tokens ?? 0,
-      cacheReadInputTokens: s.cache_read_input_tokens ?? 0,
-      costUSD: 0,
-      webSearchRequests: 0,
-    })
+    let cost = 0
+    let input = 0
+    let output = 0
+    for (const [model, usage] of Object.entries(sessionModelUsage(s))) {
+      if (model === '<synthetic>') continue
+      cost += estimateTotalCostFromModel(model, usage)
+      input += usage.inputTokens ?? 0
+      output += usage.outputTokens ?? 0
+    }
     projectMap.set(slug, {
       cost: existing.cost + cost,
-      input: existing.input + (s.input_tokens ?? 0),
-      output: existing.output + (s.output_tokens ?? 0),
+      input: existing.input + input,
+      output: existing.output + output,
     })
   }
 

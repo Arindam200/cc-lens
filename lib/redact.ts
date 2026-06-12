@@ -13,12 +13,22 @@ import { projectDisplayName } from '@/lib/decode'
 // ride along on parsed sessions — cwd, slug_name, and whatever gets added
 // next — can never leak into an export by default.
 
+/** Truncate an ISO timestamp to the hour. Exact times would fingerprint a
+ *  member's working pattern; hour granularity matches what message_hours
+ *  already shares while keeping daily rollups exact. */
+function coarsenTimestamp(ts: string): string
+function coarsenTimestamp(ts: string | undefined): string | undefined
+function coarsenTimestamp(ts: string | undefined): string | undefined {
+  if (!ts || ts.length < 13) return ts
+  return `${ts.slice(0, 13)}:00:00.000Z`
+}
+
 export function redactSession(session: SessionMeta, level: RedactionLevel): SessionMeta {
   return {
     session_id: session.session_id,
     project_path: projectDisplayName(session.project_path),
-    start_time: session.start_time,
-    last_activity: session.last_activity,
+    start_time: coarsenTimestamp(session.start_time),
+    last_activity: coarsenTimestamp(session.last_activity),
     duration_minutes: session.duration_minutes,
     user_message_count: session.user_message_count,
     assistant_message_count: session.assistant_message_count,

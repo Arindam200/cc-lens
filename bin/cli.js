@@ -113,6 +113,19 @@ async function startSilentServer() {
   return { child, url }
 }
 
+/** fetch with a deadline so a stalled endpoint can't hang the command forever
+ *  (which would also keep the `finally { child.kill() }` cleanup from running). */
+async function fetchWithTimeout(url, options = {}, timeoutMs = 120_000) {
+  try {
+    return await fetch(url, { ...options, signal: AbortSignal.timeout(timeoutMs) })
+  } catch (err) {
+    if (err && (err.name === 'TimeoutError' || err.name === 'AbortError')) {
+      throw new Error(`request to ${url} timed out after ${Math.round(timeoutMs / 1000)}s`)
+    }
+    throw new Error(`request to ${url} failed: ${err?.message ?? err}`)
+  }
+}
+
 // cc-lens push --to <hub-url> --name <you> [--email x] [--machine x] [--titles] [--token x]
 async function runPush(args) {
   printBanner()
@@ -130,7 +143,7 @@ async function runPush(args) {
   console.log(`  ${DIM}Reading ~/.claude and building a redacted team export…${R}`)
   const { child, url } = await startSilentServer()
   try {
-    const exportRes = await fetch(`${url}/api/export/team`, {
+    const exportRes = await fetchWithTimeout(`${url}/api/export/team`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -145,7 +158,7 @@ async function runPush(args) {
 
     const hubUrl = to.replace(/\/$/, '')
     console.log(`  ${DIM}Pushing ${payload.sessions.length} sessions to${R} ${O2}${hubUrl}${R}`)
-    const pushRes = await fetch(`${hubUrl}/api/team/push`, {
+    const pushRes = await fetchWithTimeout(`${hubUrl}/api/team/push`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -176,7 +189,7 @@ async function runDigest(args) {
   const { child, url } = await startSilentServer()
   let digest
   try {
-    const res = await fetch(`${url}/api/digest?days=${days}&scope=${scope}`)
+    const res = await fetchWithTimeout(`${url}/api/digest?days=${days}&scope=${scope}`)
     if (!res.ok) throw new Error(`digest failed (${res.status}): ${await res.text()}`)
     digest = await res.json()
   } finally {

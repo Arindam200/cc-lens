@@ -88,6 +88,8 @@ function mergeModelUsage(target: Record<string, ModelUsage>, source?: Record<str
     t.outputTokens += u.outputTokens
     t.cacheReadInputTokens += u.cacheReadInputTokens
     t.cacheCreationInputTokens += u.cacheCreationInputTokens
+    t.costUSD += u.costUSD ?? 0
+    t.webSearchRequests += u.webSearchRequests ?? 0
     target[model] = t
   }
 }

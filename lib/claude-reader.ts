@@ -319,7 +319,15 @@ export async function getAllParsedSessions(): Promise<ParsedSession[]> {
     if (cached && cached.mtimeMs === f.mtimeMs) {
       return { slug: f.slug, session: await cached.promise }
     }
-    const promise = parseSessionFile(f.filePath, f.sessionId)
+    // Failed parses are evicted so a transient read error doesn't hide the
+    // session until the file's mtime happens to change again.
+    const promise = parseSessionFile(f.filePath, f.sessionId).then(session => {
+      if (!session) sessionCache.delete(f.filePath)
+      return session
+    }, err => {
+      sessionCache.delete(f.filePath)
+      throw err
+    })
     sessionCache.set(f.filePath, { mtimeMs: f.mtimeMs, promise })
     return { slug: f.slug, session: await promise }
   })

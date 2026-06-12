@@ -44,7 +44,16 @@ export function sessionCost(s: SessionMeta): number {
       0
     )
   }
-  return 0
+  // Legacy sessions only carry top-level token counters; price them the same
+  // way the costs API does so the two endpoints agree.
+  return estimateTotalCostFromModel('claude-opus-4-7', {
+    inputTokens: s.input_tokens ?? 0,
+    outputTokens: s.output_tokens ?? 0,
+    cacheCreationInputTokens: s.cache_creation_input_tokens ?? 0,
+    cacheReadInputTokens: s.cache_read_input_tokens ?? 0,
+    costUSD: 0,
+    webSearchRequests: 0,
+  })
 }
 
 function mergeUsage(target: Record<string, ModelUsage>, source?: Record<string, ModelUsage>) {

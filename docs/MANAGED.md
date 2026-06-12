@@ -10,7 +10,7 @@ endpoint, and a hosted team dashboard. Same codebase direction as the OSS
 hub (`/api/team/push`), with Postgres instead of a file directory, org
 scoping, auth, and billing on top.
 
-```
+```text
 member machines / CI                      managed hub (single deployment)
 ┌──────────────────────┐  HTTPS push      ┌────────────────────────────────┐
 │ cc-lens push (cron)  │ ───────────────▶ │ Next.js app                    │

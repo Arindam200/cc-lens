@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getAllParsedSessions } from '@/lib/claude-reader'
-import { estimateCostFromUsage } from '@/lib/pricing'
+import { sessionCost } from '@/lib/insights'
 import type { SessionWithFacet } from '@/types/claude'
 
 export const dynamic = 'force-dynamic'
@@ -10,12 +10,7 @@ export async function GET() {
 
   const result: SessionWithFacet[] = parsed.map((p) => ({
     ...p,
-    estimated_cost: estimateCostFromUsage('claude-opus-4-7', {
-      input_tokens: p.input_tokens ?? 0,
-      output_tokens: p.output_tokens ?? 0,
-      cache_creation_input_tokens: p.cache_creation_input_tokens ?? 0,
-      cache_read_input_tokens: p.cache_read_input_tokens ?? 0,
-    }),
+    estimated_cost: sessionCost(p),
     slug: p.slug_name,
     ai_title: p.ai_title,
     version: p.cc_version,

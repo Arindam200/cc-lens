@@ -190,6 +190,7 @@ export function SessionTable({ sessions }: Props) {
                 const totalMsgs = (s.user_message_count ?? 0) + (s.assistant_message_count ?? 0)
                 const totalTools = Object.values(s.tool_counts ?? {}).reduce((sum, c) => sum + c, 0)
                 const projectName = projectDisplayName(s.project_path ?? '')
+                const sessionTitle = s.ai_title || s.first_prompt
 
                 return (
                   <tr
@@ -212,9 +213,9 @@ export function SessionTable({ sessions }: Props) {
                       >
                         {projectName}
                       </Link>
-                      {(s.ai_title || s.first_prompt) && (
-                        <p className="text-muted-foreground/60 truncate text-[12px]" title={s.ai_title || s.first_prompt}>
-                          {(s.ai_title || s.first_prompt).slice(0, 60)}
+                      {sessionTitle && (
+                        <p className="text-muted-foreground/60 truncate text-[12px]" title={sessionTitle}>
+                          {sessionTitle.slice(0, 60)}
                         </p>
                       )}
                     </td>

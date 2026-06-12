@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest'
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest'
 import fs from 'fs/promises'
 import os from 'os'
 import path from 'path'
@@ -39,8 +39,15 @@ afterAll(async () => {
   await fs.rm(dir, { recursive: true, force: true })
 })
 
+beforeEach(() => {
+  // Most tests exercise the payload handling, not auth — opt into tokenless
+  // mode so they don't trip the fail-closed default.
+  process.env.CC_LENS_TEAM_INSECURE_LOCAL = '1'
+})
+
 afterEach(() => {
   delete process.env.CC_LENS_TEAM_TOKEN
+  delete process.env.CC_LENS_TEAM_INSECURE_LOCAL
 })
 
 describe('POST /api/team/push', () => {
@@ -111,5 +118,10 @@ describe('POST /api/team/push', () => {
     expect((await POST(request(makePayload()))).status).toBe(401)
     expect((await POST(request(makePayload(), { Authorization: 'Bearer wrong' }))).status).toBe(401)
     expect((await POST(request(makePayload(), { Authorization: 'Bearer sekrit' }))).status).toBe(200)
+  })
+
+  it('fails closed when no token is configured and tokenless mode is not opted into', async () => {
+    delete process.env.CC_LENS_TEAM_INSECURE_LOCAL
+    expect((await POST(request(makePayload()))).status).toBe(401)
   })
 })

@@ -1,8 +1,14 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, afterAll } from 'vitest'
 
 // Point user overrides at a path that doesn't exist so the developer's real
 // ~/.cc-lens/pricing.json can't leak into assertions
+const previousConfigDir = process.env.CC_LENS_CONFIG_DIR
 process.env.CC_LENS_CONFIG_DIR = '/nonexistent-cc-lens-test'
+
+afterAll(() => {
+  if (previousConfigDir === undefined) delete process.env.CC_LENS_CONFIG_DIR
+  else process.env.CC_LENS_CONFIG_DIR = previousConfigDir
+})
 
 import {
   getPricing,

@@ -7,13 +7,13 @@ those files.
 
 ## How it works
 
-```
-member machine                shared folder                 team lead machine
-┌────────────────┐            ┌──────────────────┐          ┌────────────────┐
-│ cc-lens        │  download  │ alice-2026.json  │  read    │ cc-lens /team  │
-│ /export page   │ ─────────▶ │ bob-2026.json    │ ◀─────── │ CC_LENS_TEAM_  │
-│ (redacted)     │            │ carol-2026.json  │          │ DIR=...        │
-└────────────────┘            └──────────────────┘          └────────────────┘
+```text
+member machine                shared folder                       team lead machine
+┌────────────────┐          ┌────────────────────────┐          ┌────────────────┐
+│ cc-lens        │ download │ alice.cclens-team.json │  read    │ cc-lens /team  │
+│ /export page   │ ───────▶ │ bob.cclens-team.json   │ ◀─────── │ CC_LENS_TEAM_  │
+│ (redacted)     │          │ carol.cclens-team.json │          │ DIR=...        │
+└────────────────┘          └────────────────────────┘          └────────────────┘
 ```
 
 1. **Each member** opens the Export page and downloads a
@@ -38,9 +38,13 @@ Any running cc-lens instance doubles as a team hub. Run it where the team can
 reach it (an office box, a small VM, behind your VPN):
 
 ```bash
-# On the hub — token required before exposing beyond localhost
+# On the hub — pushes are rejected unless a token is set
 CC_LENS_TEAM_TOKEN=<shared-secret> HOSTNAME=0.0.0.0 npx cc-lens
 ```
+
+The push endpoint fails closed: without `CC_LENS_TEAM_TOKEN` it returns 401.
+For tokenless experiments on localhost or a trusted LAN, opt in explicitly
+with `CC_LENS_TEAM_INSECURE_LOCAL=1`.
 
 Members push directly from their machines, no UI needed:
 

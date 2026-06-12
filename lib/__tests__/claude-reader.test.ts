@@ -7,6 +7,7 @@ import path from 'path'
 // at module load, so the reader is imported dynamically after env setup.
 let tmpDir: string
 let reader: typeof import('@/lib/claude-reader')
+let previousClaudeConfigDir: string | undefined
 
 const SESSION_ID = 'abc12345-0000-0000-0000-000000000000'
 
@@ -53,12 +54,16 @@ beforeAll(async () => {
   await fs.mkdir(projectDir, { recursive: true })
   await fs.writeFile(path.join(projectDir, `${SESSION_ID}.jsonl`), jsonlLines.join('\n'))
 
+  previousClaudeConfigDir = process.env.CLAUDE_CONFIG_DIR
   process.env.CLAUDE_CONFIG_DIR = tmpDir
   vi.resetModules()
   reader = await import('@/lib/claude-reader')
 })
 
 afterAll(async () => {
+  if (previousClaudeConfigDir === undefined) delete process.env.CLAUDE_CONFIG_DIR
+  else process.env.CLAUDE_CONFIG_DIR = previousClaudeConfigDir
+  vi.resetModules()
   await fs.rm(tmpDir, { recursive: true, force: true })
 })
 

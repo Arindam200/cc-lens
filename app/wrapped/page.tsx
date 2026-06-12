@@ -124,18 +124,21 @@ export default function WrappedPage() {
       const blob = new Blob([xml], { type: 'image/svg+xml;charset=utf-8' })
       const url = URL.createObjectURL(blob)
       const img = new Image()
-      await new Promise<void>((resolve, reject) => {
-        img.onload = () => resolve()
-        img.onerror = () => reject(new Error('failed to render card'))
-        img.src = url
-      })
       const scale = 2
       const canvas = document.createElement('canvas')
-      canvas.width = W * scale
-      canvas.height = H * scale
-      const ctx = canvas.getContext('2d')!
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
-      URL.revokeObjectURL(url)
+      try {
+        await new Promise<void>((resolve, reject) => {
+          img.onload = () => resolve()
+          img.onerror = () => reject(new Error('failed to render card'))
+          img.src = url
+        })
+        canvas.width = W * scale
+        canvas.height = H * scale
+        const ctx = canvas.getContext('2d')!
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+      } finally {
+        URL.revokeObjectURL(url)
+      }
       const png = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'))
       if (!png) throw new Error('failed to encode PNG')
       const a = document.createElement('a')

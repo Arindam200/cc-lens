@@ -34,17 +34,25 @@ function BudgetCard({ budget, onSaved }: {
   const [editing, setEditing] = useState(false)
   const [value, setValue] = useState(budget ? String(budget.monthly_budget_usd) : '')
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
 
   async function save(amount: number | null) {
     setSaving(true)
+    setSaveError('')
     try {
-      await fetch('/api/config', {
+      const res = await fetch('/api/config', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ monthly_budget_usd: amount }),
       })
+      if (!res.ok) {
+        const err = await res.json().catch(() => null)
+        throw new Error(err?.error ?? `Failed to save budget (${res.status})`)
+      }
       setEditing(false)
       onSaved()
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : String(e))
     } finally {
       setSaving(false)
     }
@@ -97,6 +105,7 @@ function BudgetCard({ budget, onSaved }: {
             )}
           </div>
         )}
+        {saveError && <p className="text-xs text-red-500">{saveError}</p>}
         {!budget && !editing && (
           <p className="text-xs text-muted-foreground">Soft limit on API-equivalent spend; cc-lens warns when the month is pacing over.</p>
         )}

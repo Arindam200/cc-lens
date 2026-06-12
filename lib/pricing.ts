@@ -101,11 +101,17 @@ export const PRICING: Record<string, ModelPricing> = new Proxy({} as Record<stri
   getOwnPropertyDescriptor: (_, k: string) => Object.getOwnPropertyDescriptor(getPricingTable(), k),
 })
 
+/** Exact match, or the key followed by a real suffix segment — so
+ *  claude-opus-4-5-20251101 matches claude-opus-4-5, but a hypothetical
+ *  claude-opus-4-50 does not. */
+function matchesPricingKey(model: string, key: string): boolean {
+  return model === key || model.startsWith(`${key}-`)
+}
+
 /** True when we have an exact or prefix pricing entry for this model (vs the fallback guess). */
 export function hasKnownPricing(model: string): boolean {
   const table = getPricingTable()
-  if (table[model]) return true
-  return Object.keys(table).some(key => model.startsWith(key))
+  return Object.keys(table).some(key => matchesPricingKey(model, key))
 }
 
 function getPricing(model: string): ModelPricing {
@@ -116,7 +122,7 @@ function getPricing(model: string): ModelPricing {
   // claude-opus-4-20250514 falls through to claude-opus-4's legacy rate).
   const keys = Object.keys(table).sort((a, b) => b.length - a.length)
   for (const key of keys) {
-    if (model.startsWith(key)) return table[key]
+    if (matchesPricingKey(model, key)) return table[key]
   }
   // Unknown model — assume current Opus rates rather than legacy ones
   return table['claude-opus-4-8']

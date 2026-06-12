@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getSessions, listProjectSlugs, resolveProjectPath } from '@/lib/claude-reader'
 import { projectDisplayName } from '@/lib/decode'
-import { estimateCostFromUsage } from '@/lib/pricing'
+import { sessionCost } from '@/lib/insights'
 import type { ProjectTrend, ProjectTrendPoint, SessionMeta } from '@/types/claude'
 
 export const dynamic = 'force-dynamic'
@@ -42,12 +42,7 @@ function addSession(point: ProjectTrendPoint, session: SessionMeta) {
   point.agent_sessions += session.uses_task_agent ? 1 : 0
   point.mcp_sessions += session.uses_mcp ? 1 : 0
   point.web_search_sessions += session.uses_web_search ? 1 : 0
-  point.estimated_cost += estimateCostFromUsage('claude-opus-4-7', {
-    input_tokens: session.input_tokens ?? 0,
-    output_tokens: session.output_tokens ?? 0,
-    cache_creation_input_tokens: session.cache_creation_input_tokens ?? 0,
-    cache_read_input_tokens: session.cache_read_input_tokens ?? 0,
-  })
+  point.estimated_cost += sessionCost(session)
 }
 
 function addPoint(target: ProjectTrendPoint, point: ProjectTrendPoint) {
@@ -137,7 +132,9 @@ export async function GET(req: Request) {
       addPoint(previous, bucketMap.get(date) ?? emptyPoint(date))
     }
 
-    const slug = pathToSlugMap.get(projectPath) ?? projectPath.replace(/\//g, '-')
+    // Fallback mirrors Claude Code's own slug convention: every
+    // non-alphanumeric character (including \ and : on Windows) becomes a dash.
+    const slug = pathToSlugMap.get(projectPath) ?? projectPath.replace(/[^a-zA-Z0-9-]/g, '-')
 
     trends.push({
       slug,
