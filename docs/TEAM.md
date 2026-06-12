@@ -73,22 +73,20 @@ Automate freshness with cron:
   and who uses it — review anything you don't recognize
 - Claude Code version skew — who is running an outdated CLI
 
-## Slack digest
+## Digest
 
-Any member (or a cron job) can post a team summary to Slack:
+Any member can print a formatted team summary in the terminal:
 
 ```bash
-npx cc-lens digest --team --webhook https://hooks.slack.com/services/...
+npx cc-lens digest --team --days 7
 ```
 
 The digest covers spend vs the prior period, top members, and session
 counts. Run it without `--team` for a personal digest with budget pace,
-potential savings, and spend-spike alerts. Save the webhook once in
-`~/.cc-lens/config.json` (`slack_webhook_url`) and schedule it weekly:
+potential savings, and spend-spike alerts.
 
-```bash
-0 9 * * 1  npx cc-lens digest --team
-```
+Slack and webhook alerts are not part of the open-source package; they are
+planned for the managed version.
 
 ## What leaves each member's machine
 

@@ -9,8 +9,6 @@ import os from 'os'
 export interface CcLensConfig {
   /** Soft monthly spend limit (API-equivalent USD); drives budget UI + alerts */
   monthly_budget_usd?: number
-  /** Slack incoming-webhook URL used by `cc-lens digest` when --webhook is omitted */
-  slack_webhook_url?: string
 }
 
 export function configDir(): string {
@@ -27,9 +25,6 @@ export async function readConfig(): Promise<CcLensConfig> {
     const out: CcLensConfig = {}
     if (typeof raw.monthly_budget_usd === 'number' && raw.monthly_budget_usd > 0) {
       out.monthly_budget_usd = raw.monthly_budget_usd
-    }
-    if (typeof raw.slack_webhook_url === 'string') {
-      out.slack_webhook_url = raw.slack_webhook_url
     }
     return out
   } catch {
@@ -52,12 +47,6 @@ export async function updateConfig(updates: Partial<Record<keyof CcLensConfig, u
     if (typeof v === 'number' && v > 0) existing.monthly_budget_usd = v
     else delete existing.monthly_budget_usd
   }
-  if ('slack_webhook_url' in updates) {
-    const v = updates.slack_webhook_url
-    if (typeof v === 'string' && v.startsWith('https://')) existing.slack_webhook_url = v
-    else delete existing.slack_webhook_url
-  }
-
   await fs.mkdir(configDir(), { recursive: true })
   await fs.writeFile(configFile(), JSON.stringify(existing, null, 2) + '\n', 'utf-8')
   return readConfig()

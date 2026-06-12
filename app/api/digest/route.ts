@@ -8,7 +8,7 @@ import type { SpendAnomaly } from '@/lib/insights'
 
 export const dynamic = 'force-dynamic'
 
-// Compact summary used by `cc-lens digest` to post Slack/webhook updates.
+// Compact summary rendered by `cc-lens digest` in the terminal.
 // One shape for both scopes: `top` holds projects locally, members for teams.
 
 export interface DigestResponse {

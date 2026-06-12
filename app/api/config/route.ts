@@ -16,7 +16,6 @@ export async function PUT(req: Request) {
   }
   const updates: Record<string, unknown> = {}
   if ('monthly_budget_usd' in body) updates.monthly_budget_usd = body.monthly_budget_usd
-  if ('slack_webhook_url' in body) updates.slack_webhook_url = body.slack_webhook_url
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: 'no recognized settings in body' }, { status: 400 })
   }

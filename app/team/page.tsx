@@ -19,8 +19,7 @@ const fetcher = (url: string) =>
 
 const MEMBER_COLORS = ['#d97706', '#60a5fa', '#34d399', '#a78bfa', '#f472b6', '#fbbf24', '#22d3ee', '#fb7185']
 
-// Swap for a dedicated waitlist form (Tally/Typeform) once it exists
-const TEAMS_WAITLIST_URL = 'https://github.com/Arindam200/cc-lens/discussions'
+const TEAMS_WAITLIST_URL = 'https://forms.gle/VWQNP4cFBkSG3rEv7'
 
 const IDLE_AFTER_DAYS = 14
 
