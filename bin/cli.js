@@ -162,10 +162,97 @@ async function runPush(args) {
   }
 }
 
+// cc-lens digest [--webhook <slack-url>] [--days 7] [--team] [--dry-run]
+// Webhook falls back to slack_webhook_url in ~/.cc-lens/config.json.
+async function runDigest(args) {
+  printBanner()
+  requireStandaloneBuild()
+
+  let webhook = typeof args.webhook === 'string' ? args.webhook : undefined
+  if (!webhook) {
+    try {
+      const configDir = process.env.CC_LENS_CONFIG_DIR ?? path.join(os.homedir(), '.cc-lens')
+      const config = JSON.parse(fs.readFileSync(path.join(configDir, 'config.json'), 'utf8'))
+      if (typeof config.slack_webhook_url === 'string') webhook = config.slack_webhook_url
+    } catch { /* no config */ }
+  }
+  if (!webhook && !args['dry-run']) {
+    console.error(`  ${O}✗${R}  Usage: ${B}cc-lens digest --webhook <slack-incoming-webhook-url>${R}`)
+    console.error(`     Optional: ${DIM}--days <n> --team --dry-run${R}`)
+    console.error(`     Or save the webhook once: ${DIM}add "slack_webhook_url" to ~/.cc-lens/config.json${R}`)
+    process.exit(1)
+  }
+
+  const days = Number(args.days) >= 1 ? Math.floor(Number(args.days)) : 7
+  const scope = args.team ? 'team' : 'local'
+
+  console.log(`  ${DIM}Building ${scope} digest for the last ${days} days…${R}`)
+  const { child, url } = await startSilentServer()
+  let digest
+  try {
+    const res = await fetch(`${url}/api/digest?days=${days}&scope=${scope}`)
+    if (!res.ok) throw new Error(`digest failed (${res.status}): ${await res.text()}`)
+    digest = await res.json()
+  } finally {
+    child.kill()
+  }
+
+  const usd = (n) => `$${n < 10 && n > 0 ? n.toFixed(2) : Math.round(n).toLocaleString()}`
+  const deltaPct = digest.prev_cost > 0
+    ? Math.round(((digest.total_cost - digest.prev_cost) / digest.prev_cost) * 100)
+    : null
+  const delta = deltaPct === null ? '' : deltaPct >= 0 ? ` (up ${deltaPct}% vs prior period)` : ` (down ${-deltaPct}% vs prior period)`
+
+  const lines = [
+    `*Claude Code digest — last ${digest.period_days} days${scope === 'team' ? ' (team)' : ''}*`,
+    `Spend: *${usd(digest.total_cost)}*${delta} across ${digest.sessions} sessions`,
+  ]
+  if (digest.top.length > 0) {
+    const label = scope === 'team' ? 'Top members' : 'Top projects'
+    lines.push(`${label}: ${digest.top.map((t) => `${t.name} (${usd(t.cost)})`).join(', ')}`)
+  }
+  if (typeof digest.cache_hit_rate === 'number') {
+    lines.push(`Cache hit rate: ${Math.round(digest.cache_hit_rate * 100)}%`)
+  }
+  if (digest.potential_monthly_savings > 1) {
+    lines.push(`Potential savings: ~${usd(digest.potential_monthly_savings)}/mo — see the Insights page`)
+  }
+  if (digest.budget) {
+    const pct = Math.round((digest.budget.month_to_date_cost / digest.budget.monthly_budget_usd) * 100)
+    lines.push(`Budget: ${usd(digest.budget.month_to_date_cost)} of ${usd(digest.budget.monthly_budget_usd)} used (${pct}%)`)
+  }
+  for (const a of digest.anomalies ?? []) {
+    lines.push(`:warning: Spend spike on ${a.date}: ${usd(a.cost)} vs ${usd(a.baseline)} daily median`)
+  }
+  const text = lines.join('\n')
+
+  if (args['dry-run']) {
+    console.log()
+    text.split('\n').forEach((l) => console.log(`  ${l}`))
+    console.log(`\n  ${O}✓${R}  Dry run — nothing posted\n`)
+    return
+  }
+
+  const res = await fetch(webhook, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text }),
+  })
+  if (!res.ok) {
+    console.error(`  ${O}✗${R}  Webhook rejected the digest (${res.status}): ${await res.text()}`)
+    process.exit(1)
+  }
+  console.log(`\n  ${O}✓${R}  Digest posted${scope === 'team' ? ' (team scope)' : ''}\n`)
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2))
   if (args._[0] === 'push') {
     await runPush(args)
+    return
+  }
+  if (args._[0] === 'digest') {
+    await runDigest(args)
     return
   }
 

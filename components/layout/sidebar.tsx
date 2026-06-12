@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, FolderOpen, MessageSquare, DollarSign,
-  Wrench, Activity, History, Blocks, FileText, Lightbulb,
+  Wrench, Activity, History, Blocks, FileText, Lightbulb, Gift,
   Brain, Settings, Download, Users, Moon, Sun, PanelLeftClose, PanelLeft,
 } from 'lucide-react'
 import { useTheme } from '@/components/theme-provider'
@@ -24,6 +24,7 @@ const NAV = [
   { href: '/history',  label: 'History',   icon: History         },
   { href: '/workspace', label: 'Workspace', icon: Blocks         },
   { href: '/team',     label: 'Team',      icon: Users           },
+  { href: '/wrapped',  label: 'Wrapped',   icon: Gift            },
   { href: '/plans',    label: 'Plans',     icon: FileText        },
   { href: '/memory',   label: 'Memory',    icon: Brain           },
   { href: '/settings', label: 'Settings',  icon: Settings        },
