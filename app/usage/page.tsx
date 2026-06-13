@@ -4,6 +4,7 @@ import useSWR from 'swr'
 import { TopBar } from '@/components/layout/top-bar'
 import { UsageGauge, type GaugeWindow } from '@/components/usage/usage-gauge'
 import { UsageControls } from '@/components/usage/usage-controls'
+import { UsageAlerts } from '@/components/usage/usage-alerts'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -132,6 +133,13 @@ export default function UsagePage() {
               </CardContent>
             </Card>
 
+            {/* Alerts */}
+            <Card>
+              <CardContent className="pt-6">
+                <UsageAlerts data={data} />
+              </CardContent>
+            </Card>
+
             {/* Footnotes / pitfalls */}
             <Card className="border-amber-500/30">
               <CardHeader>
@@ -157,8 +165,8 @@ export default function UsagePage() {
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2.5 text-sm text-muted-foreground leading-relaxed">
-                  <li><span className="inline-block rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] font-semibold px-1.5 py-0.5 mr-1.5 align-middle">NOW</span> Local, estimate-based gauge with computed 5-hour reset, pinnable weekly reset, and calibration. No account, nothing leaves your machine.</li>
-                  <li><span className="inline-block rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 text-[10px] font-semibold px-1.5 py-0.5 mr-1.5 align-middle">NEXT</span> Reset pings — notify the moment a window resets, even with the tab closed.</li>
+                  <li><span className="inline-block rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] font-semibold px-1.5 py-0.5 mr-1.5 align-middle">NOW</span> Local, estimate-based gauge with computed 5-hour reset, pinnable weekly reset, calibration, and reset/cap alerts (browser notifications while the tab is open). No account, nothing leaves your machine.</li>
+                  <li><span className="inline-block rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 text-[10px] font-semibold px-1.5 py-0.5 mr-1.5 align-middle">NEXT</span> Background pings via a service worker, so resets notify even when the tab is closed; plus usage history and burn-pattern charts.</li>
                   <li><span className="inline-block rounded bg-purple-500/15 text-purple-600 dark:text-purple-400 text-[10px] font-semibold px-1.5 py-0.5 mr-1.5 align-middle">MANAGED</span> Authenticated mode — sign in to read Anthropic&apos;s <span className="text-foreground">official</span> remaining usage and exact reset times via API, replacing the estimate and calibration entirely. Opt-in, off by default.</li>
                 </ul>
               </CardContent>
