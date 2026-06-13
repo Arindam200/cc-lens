@@ -54,6 +54,8 @@ export interface SessionMeta {
   user_message_count: number
   assistant_message_count: number
   tool_counts: Record<string, number>
+  /** Skill (slash-command) invocations by skill name, e.g. { browse: 3 } */
+  skill_counts?: Record<string, number>
   languages: Record<string, number>
   git_commits: number
   git_pushes: number
@@ -259,6 +261,12 @@ export interface ToolSummary {
   error_count: number
 }
 
+export interface SkillSummary {
+  name: string
+  total_calls: number
+  session_count: number
+}
+
 export interface McpServerSummary {
   server_name: string
   tools: Array<{ name: string; calls: number }>
@@ -275,6 +283,7 @@ export interface VersionRecord {
 
 export interface ToolsAnalytics {
   tools: ToolSummary[]
+  skills: SkillSummary[]
   mcp_servers: McpServerSummary[]
   feature_adoption: Record<string, { sessions: number; pct: number }>
   versions: VersionRecord[]

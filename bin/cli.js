@@ -48,13 +48,44 @@ function printBanner() {
   console.log()
 }
 
-function findFreePort(port = 3000) {
+function findFreePort(port = 3000, host = '127.0.0.1') {
   return new Promise((resolve) => {
     const server = net.createServer()
     server.unref()
-    server.on('error', () => resolve(findFreePort(port + 1)))
-    server.listen(port, '127.0.0.1', () => server.close(() => resolve(port)))
+    server.on('error', () => resolve(findFreePort(port + 1, host)))
+    server.listen(port, host, () => server.close(() => resolve(port)))
   })
+}
+
+function readVersion() {
+  try {
+    return require(path.join(PKG_DIR, 'package.json')).version
+  } catch {
+    return 'unknown'
+  }
+}
+
+function printHelp() {
+  console.log(`
+  ${B}${O}cc-lens${R}  ${DIM}—  your ~/.claude/ at a glance${R}
+
+  ${B}Usage${R}
+    cc-lens [options]
+    cc-lens push --to <hub-url> --name <your-name> [options]
+    cc-lens digest [--days <n>] [--team]
+
+  ${B}Options${R}
+    --host <host>   Address to bind (default ${O2}127.0.0.1${R}, loopback only).
+                    Set ${O2}0.0.0.0${R} to expose on your LAN. Env: ${O2}CC_LENS_HOST${R}.
+    --port <port>   Port to listen on (default ${O2}3000${R}; auto-increments if
+                    taken). Env: ${O2}PORT${R}.
+    --help, -h      Show this help and exit.
+    --version, -v   Print the version and exit.
+
+  ${B}Note${R}
+    ${DIM}The dashboard serves your private Claude Code history, so it binds to
+    loopback by default. Override the host only if you understand the exposure.${R}
+`)
 }
 
 function openBrowser(url) {
@@ -233,7 +264,11 @@ async function runDigest(args) {
 }
 
 async function main() {
-  const args = parseArgs(process.argv.slice(2))
+  const argv = process.argv.slice(2)
+  if (argv.includes('--help') || argv.includes('-h')) { printHelp(); return }
+  if (argv.includes('--version') || argv.includes('-v')) { console.log(readVersion()); return }
+
+  const args = parseArgs(argv)
   if (args._[0] === 'push') {
     await runPush(args)
     return
@@ -246,10 +281,13 @@ async function main() {
   printBanner()
   requireStandaloneBuild()
 
-  // Bind to loopback only — this server exposes private Claude history.
-  // Users who really need LAN access can set HOSTNAME=0.0.0.0 explicitly.
-  const hostname = process.env.HOSTNAME ?? '127.0.0.1'
-  const port     = await findFreePort(Number(process.env.PORT) || 3000)
+  // Bind to loopback only by default — this server exposes private Claude
+  // history. Opt into LAN access with `--host 0.0.0.0` or CC_LENS_HOST.
+  // We intentionally do NOT read $HOSTNAME: many shells and containers export
+  // it as the machine name, which both breaks http://localhost and can bind
+  // wider than intended (issue #21).
+  const hostname = (typeof args.host === 'string' && args.host) || process.env.CC_LENS_HOST || '127.0.0.1'
+  const port     = await findFreePort(Number(args.port ?? process.env.PORT) || 3000, hostname)
   const url      = `http://${hostname === '0.0.0.0' ? 'localhost' : hostname}:${port}`
 
   console.log(`  ${DIM}Starting server on${R} ${O2}${B}${url}${R}\n`)

@@ -155,10 +155,14 @@ export function cacheEfficiency(
   const hitRate = totalContext > 0
     ? usage.cacheReadInputTokens / totalContext
     : 0
+  // No-cache baseline: without prompt caching, the tokens that were written to
+  // cache would simply be sent as ordinary input on each call, billed at the
+  // input rate — not the (higher) cache-write rate. Pricing them at cacheWrite
+  // here would inflate the baseline by the ~25% write premium and understate
+  // the savings figure. See issue #12.
   const wouldHavePaidUSD =
-    (usage.inputTokens + usage.cacheReadInputTokens) * p.input +
-    usage.outputTokens * p.output +
-    usage.cacheCreationInputTokens * p.cacheWrite
+    (usage.inputTokens + usage.cacheReadInputTokens + usage.cacheCreationInputTokens) * p.input +
+    usage.outputTokens * p.output
   return { savedUSD, hitRate, wouldHavePaidUSD }
 }
 

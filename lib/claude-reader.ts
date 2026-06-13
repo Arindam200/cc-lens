@@ -110,6 +110,7 @@ async function parseSessionFile(filePath: string, sessionId: string): Promise<Pa
   let userCount = 0
   let assistantCount = 0
   const toolCounts: Record<string, number> = {}
+  const skillCounts: Record<string, number> = {}
   let inputTokens = 0
   let outputTokens = 0
   let cacheRead = 0
@@ -207,7 +208,7 @@ async function parseSessionFile(filePath: string, sessionId: string): Promise<Pa
           const content = msg?.content
           if (Array.isArray(content)) {
             for (const c of content) {
-              const item = c as { type?: string; name?: string }
+              const item = c as { type?: string; name?: string; input?: Record<string, unknown> }
               if (item.type === 'thinking') hasThinking = true
               if (item.type === 'tool_use' && item.name) {
                 toolCounts[item.name] = (toolCounts[item.name] ?? 0) + 1
@@ -215,6 +216,12 @@ async function parseSessionFile(filePath: string, sessionId: string): Promise<Pa
                 if (item.name.startsWith('mcp__')) hasMcp = true
                 if (item.name === 'WebSearch') hasWebSearch = true
                 if (item.name === 'WebFetch') hasWebFetch = true
+                // Skill calls carry the invoked slash-command name in input.skill
+                // (e.g. Skill(skill="browse")). Track it as a first-class dimension.
+                if (item.name === 'Skill' && typeof item.input?.skill === 'string') {
+                  const skill = item.input.skill
+                  skillCounts[skill] = (skillCounts[skill] ?? 0) + 1
+                }
               }
             }
           }
@@ -240,6 +247,7 @@ async function parseSessionFile(filePath: string, sessionId: string): Promise<Pa
     user_message_count: userCount,
     assistant_message_count: assistantCount,
     tool_counts: toolCounts,
+    skill_counts: skillCounts,
     languages: {},
     git_commits: 0,
     git_pushes: 0,
