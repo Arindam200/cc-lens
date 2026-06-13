@@ -34,7 +34,7 @@ On first run, `cc-lens` prepares a small runtime cache in `~/.cc-lens/`. After t
 | <h3 align="center">Overview</h3><picture><source media="(prefers-color-scheme: dark)" srcset="./public/dashboard-dark.png" /><source media="(prefers-color-scheme: light)" srcset="./public/dashboard-white.png" /><img alt="Dashboard overview" src="./public/dashboard-dark.png" width="420" height="236" /></picture><br />Track sessions, messages, tokens, cost, storage, trends, models, peak hours, projects, and recent activity. | <h3 align="center">Sessions</h3><img alt="Session replay and chat" src="./public/session-chat.png" width="420" height="236" /><br />Search sessions, replay JSONL conversations, inspect Markdown replies, tool calls, costs, tokens, and compactions. |
 | <h3 align="center">Costs</h3><img alt="Costs" src="./public/costs.png" width="420" height="236" /><br />Review estimated spend, cache savings, project costs, model breakdowns, token usage, and pricing references. | <h3 align="center">Insights</h3><img alt="Insights" src="./public/insights.png" width="420" height="236" /><br />Find cache, model, compaction, plan-fit, budget, and savings opportunities from local usage patterns. |
 | <h3 align="center">Projects</h3><img alt="Projects" src="./public/projects.png" width="420" height="236" /><br />Browse projects by sessions, duration, spend, languages, branches, MCP usage, agents, and top tools. | <h3 align="center">Project Trends</h3><img alt="Project trends" src="./public/projects-trend.png" width="420" height="236" /><br />Analyze project sessions, spend, language mix, branch activity, model usage, tools, and activity over time. |
-| <h3 align="center">Tools & Features</h3><img alt="Tools and features" src="./public/tools.png" width="420" height="236" /><br />Compare tool rankings, categories, MCP servers, feature adoption, errors, versions, and git branch usage. | <h3 align="center">Activity</h3><img alt="Activity calendar" src="./public/activity.png" width="420" height="236" /><br />View activity calendars, streaks, active days, peak hours, day-of-week patterns, and usage consistency. |
+| <h3 align="center">Tools & Features</h3><img alt="Tools and features" src="./public/tools.png" width="420" height="236" /><br />Compare tool rankings, categories, skill (slash-command) usage, MCP servers, feature adoption, errors, versions, and git branch usage. | <h3 align="center">Activity</h3><img alt="Activity calendar" src="./public/activity.png" width="420" height="236" /><br />View activity calendars, streaks, active days, peak hours, day-of-week patterns, and usage consistency. |
 | <h3 align="center">Tasks</h3><img alt="Tasks" src="./public/tasks.png" width="420" height="236" /><br />Browse Claude Code todos with search, status filters, task metadata, project context, and local file provenance. | <h3 align="center">Workspace</h3><img alt="Workspace" src="./public/workspace.png" width="420" height="236" /><br />Inspect workspace state, memory, settings, installed skills, plugins, MCP servers, and local storage usage. |
 | <h3 align="center">Wrapped</h3><img alt="Wrapped" src="./public/wrapped.png" width="420" height="236" /><br />Create a yearly card with sessions, usage, spend, favorite tools, active projects, and local highlights. | <h3 align="center">Export & Import</h3><img alt="Export" src="./public/export.png" width="420" height="236" /><br />Export portable `.cclens.json` files with stats, metadata, facets, history, previews, and date filters. |
 
@@ -59,6 +59,31 @@ $env:CLAUDE_CONFIG_DIR="C:\Users\you\.claude-work"; npx cc-lens
 ```
 
 The active config directory is shown in the CLI banner on launch.
+
+## CLI Options
+
+```bash
+npx cc-lens [options]
+```
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `--host <host>` | `127.0.0.1` | Address to bind. Loopback only by default. Set `0.0.0.0` to expose the dashboard on your LAN. Also settable with the `CC_LENS_HOST` env var. |
+| `--port <port>` | `3000` | Port to listen on. Auto-increments if the port is taken. Also settable with the `PORT` env var. |
+| `--help`, `-h` | | Print usage and exit. |
+| `--version`, `-v` | | Print the version and exit. |
+
+The dashboard serves your private Claude Code history, so it binds to loopback (`127.0.0.1`) by default. `cc-lens` does not read the shell's `HOSTNAME` variable, so it works the same on WSL, containers, and CI. Override the host only if you understand the exposure.
+
+```bash
+# Bind to a fixed port
+npx cc-lens --port 4000
+
+# Expose on the local network (opt-in)
+npx cc-lens --host 0.0.0.0
+```
+
+There are also `cc-lens push` and `cc-lens digest` subcommands for team mode; see [Team mode](./docs/TEAM.md).
 
 ## Run From Source
 
@@ -128,6 +153,14 @@ Claude Code Lens runs locally and reads files from your machine. It does not req
 ## Cost Estimates
 
 Claude Code stores token counts and model identifiers, not final billing totals. `cc-lens` estimates cost using the pricing table in `lib/pricing.ts`. If provider pricing changes, update that file to keep estimates current.
+
+To override or add rates without editing source, create `~/.cc-lens/pricing.json`. Entries are merged over the defaults, so you can override a single model or add new ones. Values are in dollars per million tokens:
+
+```json
+{
+  "claude-opus-4-8": { "input": 5.0, "output": 25.0, "cacheWrite": 6.25, "cacheRead": 0.5 }
+}
+```
 
 ## Star History
 
