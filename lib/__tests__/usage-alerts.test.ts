@@ -50,6 +50,10 @@ describe('computeActiveAlerts', () => {
     const far = makeData()
     far.pace.capHitMs = NOW + 90 * 60_000
     expect(computeActiveAlerts(far, NOW).some(a => a.id.startsWith('pace5h-'))).toBe(false)
+
+    const past = makeData()
+    past.pace.capHitMs = NOW - 1
+    expect(computeActiveAlerts(past, NOW).some(a => a.id.startsWith('pace5h-'))).toBe(false)
   })
 
   it('ignores the 5-hour window when no block is open', () => {

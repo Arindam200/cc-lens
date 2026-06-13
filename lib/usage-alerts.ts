@@ -52,7 +52,7 @@ export function computeActiveAlerts(data: UsageResponse, nowMs: number): AlertDe
     const inst = String(b.resetMs)
     const cap = capAlert('cap5h', '5-hour window', b.fraction, inst)
     if (cap) out.push(cap)
-    if (data.pace.capHitMs && data.pace.capHitMs - nowMs <= PACE_HORIZON_MS) {
+    if (data.pace.capHitMs && data.pace.capHitMs > nowMs && data.pace.capHitMs - nowMs <= PACE_HORIZON_MS) {
       const mins = Math.max(Math.round((data.pace.capHitMs - nowMs) / 60_000), 1)
       out.push({
         id: `pace5h-${inst}`,
