@@ -27,15 +27,6 @@ npx cc-lens
 
 On first run, `cc-lens` prepares a small runtime cache in `~/.cc-lens/`. After that, launches are faster.
 
-## CLI Commands
-
-| Command | What it does |
-| --- | --- |
-| `npx cc-lens` | Starts the local dashboard on a free loopback port and opens it in your browser. |
-| `npx cc-lens digest --days 7` | Prints a terminal spend digest with sessions, cost changes, cache hit rate, savings, budget pace, and spike alerts. |
-| `npx cc-lens digest --team --days 7` | Prints the same digest for team exports loaded from the local team directory. |
-| `npx cc-lens push --to <hub-url> --name <you>` | Builds a redacted team export locally and pushes it to a self-hosted cc-lens hub. |
-
 ## What You Can See
 
 |  |  |
