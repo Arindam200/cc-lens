@@ -847,6 +847,39 @@ export interface UsageTurn {
   cacheWriteTokens: number
 }
 
+// Parsed turns are cached per file, keyed on mtime, so the frequently-polled
+// /api/usage endpoint only re-reads files written since the last scan. Cached
+// rows were filtered with an earlier (smaller) sinceMs; since sinceMs only
+// moves forward, every cached turn stays valid and the window math re-filters
+// by timestamp anyway, so reusing them can't admit stale data.
+const fileTurnsCache = new Map<string, { mtimeMs: number; turns: UsageTurn[] }>()
+
+function extractTurns(filePath: string, sinceMs: number): Promise<UsageTurn[]> {
+  const turns: UsageTurn[] = []
+  return readJSONLLines(filePath, (obj) => {
+    if (obj.type !== 'assistant') return
+    const ts = typeof obj.timestamp === 'string' ? Date.parse(obj.timestamp) : NaN
+    if (isNaN(ts) || ts < sinceMs) return
+    const msg = (obj as { message?: { model?: string; usage?: Record<string, number> } }).message
+    if (!msg?.usage || !msg.model) return
+    const usage = msg.usage
+    turns.push({
+      ts,
+      model: msg.model,
+      costUSD: estimateCostFromUsage(msg.model, {
+        input_tokens: usage.input_tokens ?? 0,
+        output_tokens: usage.output_tokens ?? 0,
+        cache_creation_input_tokens: usage.cache_creation_input_tokens ?? 0,
+        cache_read_input_tokens: usage.cache_read_input_tokens ?? 0,
+      }),
+      inputTokens: usage.input_tokens ?? 0,
+      outputTokens: usage.output_tokens ?? 0,
+      cacheReadTokens: usage.cache_read_input_tokens ?? 0,
+      cacheWriteTokens: usage.cache_creation_input_tokens ?? 0,
+    })
+  }).then(() => turns)
+}
+
 /**
  * Collect every assistant turn across all projects with a timestamp at or after
  * `sinceMs`. Files whose mtime predates `sinceMs` can't hold a newer turn, so
@@ -861,32 +894,25 @@ export async function getRecentTurns(sinceMs: number): Promise<UsageTurn[]> {
   await Promise.all(slugs.map(async (slug) => {
     const files = await listProjectJSONLFiles(slug)
     await mapPool(files, 16, async (filePath) => {
+      let mtimeMs: number
       try {
-        const stat = await fs.stat(filePath)
-        if (stat.mtimeMs < sinceMs) return
-      } catch { return }
-      await readJSONLLines(filePath, (obj) => {
-        if (obj.type !== 'assistant') return
-        const ts = typeof obj.timestamp === 'string' ? Date.parse(obj.timestamp) : NaN
-        if (isNaN(ts) || ts < sinceMs) return
-        const msg = (obj as { message?: { model?: string; usage?: Record<string, number> } }).message
-        if (!msg?.usage || !msg.model) return
-        const usage = msg.usage
-        turns.push({
-          ts,
-          model: msg.model,
-          costUSD: estimateCostFromUsage(msg.model, {
-            input_tokens: usage.input_tokens ?? 0,
-            output_tokens: usage.output_tokens ?? 0,
-            cache_creation_input_tokens: usage.cache_creation_input_tokens ?? 0,
-            cache_read_input_tokens: usage.cache_read_input_tokens ?? 0,
-          }),
-          inputTokens: usage.input_tokens ?? 0,
-          outputTokens: usage.output_tokens ?? 0,
-          cacheReadTokens: usage.cache_read_input_tokens ?? 0,
-          cacheWriteTokens: usage.cache_creation_input_tokens ?? 0,
-        })
-      })
+        mtimeMs = (await fs.stat(filePath)).mtimeMs
+      } catch {
+        fileTurnsCache.delete(filePath) // file vanished
+        return
+      }
+      if (mtimeMs < sinceMs) {
+        fileTurnsCache.delete(filePath) // aged out of the window for good
+        return
+      }
+      const cached = fileTurnsCache.get(filePath)
+      const fileTurns = cached && cached.mtimeMs === mtimeMs
+        ? cached.turns
+        : await extractTurns(filePath, sinceMs)
+      if (!cached || cached.mtimeMs !== mtimeMs) {
+        fileTurnsCache.set(filePath, { mtimeMs, turns: fileTurns })
+      }
+      for (const t of fileTurns) turns.push(t)
     })
   }))
 

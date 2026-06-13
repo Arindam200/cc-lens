@@ -32,6 +32,17 @@ export interface CcLensConfig {
 
 const USAGE_PLANS: ReadonlySet<string> = new Set(['pro', 'max5x', 'max20x', 'custom'])
 
+const UTC_ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/
+
+/** True only for a canonical UTC ISO-8601 string — strict enough that a value
+ *  round-trips through Date unchanged. Shared by the config loader and the API
+ *  route so both paths accept exactly the same set of values. */
+export function isCanonicalUtcIso(value: unknown): value is string {
+  if (typeof value !== 'string' || !UTC_ISO_RE.test(value)) return false
+  const d = new Date(value)
+  return !isNaN(d.getTime()) && d.toISOString() === value
+}
+
 export function configDir(): string {
   return process.env.CC_LENS_CONFIG_DIR ?? path.join(os.homedir(), '.cc-lens')
 }
@@ -56,7 +67,7 @@ export async function readConfig(): Promise<CcLensConfig> {
     if (typeof raw.usage_cap_7d_usd === 'number' && raw.usage_cap_7d_usd > 0) {
       out.usage_cap_7d_usd = raw.usage_cap_7d_usd
     }
-    if (typeof raw.usage_weekly_reset_iso === 'string' && !isNaN(Date.parse(raw.usage_weekly_reset_iso))) {
+    if (isCanonicalUtcIso(raw.usage_weekly_reset_iso)) {
       out.usage_weekly_reset_iso = raw.usage_weekly_reset_iso
     }
     return out
@@ -97,7 +108,7 @@ export async function updateConfig(updates: Partial<Record<keyof CcLensConfig, u
   }
   if ('usage_weekly_reset_iso' in updates) {
     const v = updates.usage_weekly_reset_iso
-    if (typeof v === 'string' && !isNaN(Date.parse(v))) existing.usage_weekly_reset_iso = v
+    if (isCanonicalUtcIso(v)) existing.usage_weekly_reset_iso = v
     else delete existing.usage_weekly_reset_iso
   }
   await fs.mkdir(configDir(), { recursive: true })

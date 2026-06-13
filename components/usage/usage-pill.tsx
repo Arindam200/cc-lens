@@ -44,7 +44,7 @@ export function UsagePill() {
     <Link
       href="/usage"
       title="5-hour session usage (estimated)"
-      className="hidden sm:flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs hover:bg-accent transition-colors"
+      className="flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs hover:bg-accent transition-colors"
     >
       <Gauge className={cn('w-3.5 h-3.5', open ? color(block.fraction) : 'text-emerald-500')} />
       {open ? (

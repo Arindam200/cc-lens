@@ -33,12 +33,16 @@ export function UsageControls({
   const [pct7d, setPct7d] = useState('')
   const [reset, setReset] = useState('')
   const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
 
   async function run(updates: Record<string, unknown>) {
     setBusy(true)
+    setErr(null)
     try {
       await putConfig(updates)
       onChange()
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Failed to save settings')
     } finally {
       setBusy(false)
     }
@@ -58,6 +62,12 @@ export function UsageControls({
 
   return (
     <div className="space-y-6 text-sm">
+      {err && (
+        <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+          {err}
+        </p>
+      )}
+
       {/* Plan */}
       <div className="flex flex-wrap items-center gap-3">
         <span className="text-muted-foreground w-28 shrink-0">Plan</span>

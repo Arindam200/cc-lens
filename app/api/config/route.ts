@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { readConfig, updateConfig } from '@/lib/config'
+import { readConfig, updateConfig, isCanonicalUtcIso } from '@/lib/config'
 
 export const dynamic = 'force-dynamic'
 
@@ -49,9 +49,9 @@ export async function PUT(req: Request) {
   }
   if ('usage_weekly_reset_iso' in body) {
     const value = body.usage_weekly_reset_iso
-    if (value !== null && (typeof value !== 'string' || isNaN(Date.parse(value)))) {
+    if (value !== null && !isCanonicalUtcIso(value)) {
       return NextResponse.json(
-        { error: 'usage_weekly_reset_iso must be an ISO date string or null' },
+        { error: 'usage_weekly_reset_iso must be a canonical UTC ISO-8601 string (e.g. 2026-06-17T01:29:00.000Z) or null' },
         { status: 400 }
       )
     }
