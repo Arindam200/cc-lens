@@ -10,6 +10,13 @@ npx cc-lens
 
 The CLI finds a free local port, starts the dashboard, and opens it in your browser.
 
+> [!NOTE]
+> **cc-lens 0.4.0 is out**
+>
+> Adds Insights, budgets, team adoption, terminal digest, Wrapped, and expanded project docs.
+>
+> [View the v0.4.0 release notes](https://github.com/Arindam200/cc-lens/releases/tag/v0.4.0)
+
 ## Quick Start
 
 Run directly with `npx`:
@@ -20,101 +27,27 @@ npx cc-lens
 
 On first run, `cc-lens` prepares a small runtime cache in `~/.cc-lens/`. After that, launches are faster.
 
+## CLI Commands
+
+| Command | What it does |
+| --- | --- |
+| `npx cc-lens` | Starts the local dashboard on a free loopback port and opens it in your browser. |
+| `npx cc-lens digest --days 7` | Prints a terminal spend digest with sessions, cost changes, cache hit rate, savings, budget pace, and spike alerts. |
+| `npx cc-lens digest --team --days 7` | Prints the same digest for team exports loaded from the local team directory. |
+| `npx cc-lens push --to <hub-url> --name <you>` | Builds a redacted team export locally and pushes it to a self-hosted cc-lens hub. |
+
 ## What You Can See
 
-### Overview
+|  |  |
+| --- | --- |
+| <h3 align="center">Overview</h3><picture><source media="(prefers-color-scheme: dark)" srcset="./public/dashboard-dark.png" /><source media="(prefers-color-scheme: light)" srcset="./public/dashboard-white.png" /><img alt="Dashboard overview" src="./public/dashboard-dark.png" width="420" height="236" /></picture><br />Track sessions, messages, tokens, cost, storage, trends, models, peak hours, projects, and recent activity. | <h3 align="center">Sessions</h3><img alt="Session replay and chat" src="./public/session-chat.png" width="420" height="236" /><br />Search sessions, replay JSONL conversations, inspect Markdown replies, tool calls, costs, tokens, and compactions. |
+| <h3 align="center">Costs</h3><img alt="Costs" src="./public/costs.png" width="420" height="236" /><br />Review estimated spend, cache savings, project costs, model breakdowns, token usage, and pricing references. | <h3 align="center">Insights</h3><img alt="Insights" src="./public/insights.png" width="420" height="236" /><br />Find cache, model, compaction, plan-fit, budget, and savings opportunities from local usage patterns. |
+| <h3 align="center">Projects</h3><img alt="Projects" src="./public/projects.png" width="420" height="236" /><br />Browse projects by sessions, duration, spend, languages, branches, MCP usage, agents, and top tools. | <h3 align="center">Project Trends</h3><img alt="Project trends" src="./public/projects-trend.png" width="420" height="236" /><br />Analyze project sessions, spend, language mix, branch activity, model usage, tools, and activity over time. |
+| <h3 align="center">Tools & Features</h3><img alt="Tools and features" src="./public/tools.png" width="420" height="236" /><br />Compare tool rankings, categories, MCP servers, feature adoption, errors, versions, and git branch usage. | <h3 align="center">Activity</h3><img alt="Activity calendar" src="./public/activity.png" width="420" height="236" /><br />View activity calendars, streaks, active days, peak hours, day-of-week patterns, and usage consistency. |
+| <h3 align="center">Tasks</h3><img alt="Tasks" src="./public/tasks.png" width="420" height="236" /><br />Browse Claude Code todos with search, status filters, task metadata, project context, and local file provenance. | <h3 align="center">Workspace</h3><img alt="Workspace" src="./public/workspace.png" width="420" height="236" /><br />Inspect workspace state, memory, settings, installed skills, plugins, MCP servers, and local storage usage. |
+| <h3 align="center">Wrapped</h3><img alt="Wrapped" src="./public/wrapped.png" width="420" height="236" /><br />Create a yearly card with sessions, usage, spend, favorite tools, active projects, and local highlights. | <h3 align="center">Export & Import</h3><img alt="Export" src="./public/export.png" width="420" height="236" /><br />Export portable `.cclens.json` files with stats, metadata, facets, history, previews, and date filters. |
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="./public/dashboard-dark.png" />
-  <source media="(prefers-color-scheme: light)" srcset="./public/dashboard-white.png" />
-  <img alt="Dashboard overview" src="./public/dashboard-dark.png" />
-</picture>
-
-- Sessions, messages, token usage, estimated cost, and local storage.
-- Trend cards with sparklines.
-- Date presets for 7, 30, and 90 days, plus a custom date range picker.
-- Usage over time, model distribution, peak hours, project activity, token breakdown, and recent sessions.
-
-### Projects
-
-![Projects](./public/projects.png)
-
-- Searchable, sortable project grid.
-- Per-project cards with sessions, duration, estimated cost, languages, git branches, MCP/agent badges, and top tools.
-- Project detail pages with sessions, cost over time, language distribution, branch activity, and tool usage.
-
-### Sessions
-
-![Session replay and chat](./public/session-chat.png)
-
-- Searchable session table with badges for compaction, agents, MCP, web search/fetch, and extended thinking.
-- Full session replay reconstructed from JSONL.
-- Assistant responses rendered as GitHub-flavored Markdown.
-- Tool calls and tool results shown inline.
-- File read/write/update tool results parsed into readable cards.
-- Per-turn model, duration, token breakdown, and estimated cost.
-- Compaction events shown in context with a token accumulation chart.
-
-### Costs
-
-![Costs](./public/costs.png)
-
-- Total estimated cost, cache savings, and estimated cost without cache.
-- Cost over time and cost by project.
-- Per-model token and cost breakdown.
-- Cache efficiency panel.
-- Pricing reference from `lib/pricing.ts`.
-
-### Tools & Features
-![Tools & features](./public/tools.png)
-
-- Tool ranking across all sessions.
-- Tool categories for file I/O, shell, agents, web, planning, todos, skills, MCP, and other calls.
-- MCP server usage details.
-- Feature adoption across sessions.
-- Tool error analysis.
-- Claude Code version history.
-- Git branch analytics.
-
-### Activity
-
-![Activity calendar](./public/activity.png)
-
-- GitHub-style activity calendar.
-- Current streak, longest streak, active days, and most active day.
-- Usage over time, peak hours, and day-of-week patterns.
-- Activity can be derived from session JSONL when the stats cache is incomplete.
-
-### Local Claude Code Files
-
-![Todos](./public/todos.png)
-
-- **History**: Search and page through `~/.claude/history.jsonl`.
-- **Todos**: Browse todos from `~/.claude/todos/` with search and status filters.
-- **Plans**: Read saved plans from `~/.claude/plans/` with inline Markdown rendering.
-- **Memory**: Browse and edit memory files across projects, with type filters and stale detection.
-- **Settings**: Inspect `~/.claude/settings.json`, installed skills, plugins, MCP servers, and storage usage.
-
-### Export & Import
-
-![Export](./public/export.png)
-
-- Export a portable `.cclens.json` file containing stats, session metadata, facets, and recent command history.
-- Preview export counts before downloading.
-- Optionally filter exports by session start date.
-- Drop an export file to preview an additive merge from another machine.
-
-Import is intentionally preview-only right now. It shows which sessions are new or already present, but it does not write merged data back into `~/.claude/`, to avoid corrupting live Claude Code files.
-
-## Navigation
-
-![Global search (Command K)](./public/command-k.png)
-
-- Global search: `Cmd+K`, `Ctrl+K`, or `/`.
-- Session list keyboard navigation: `j` / `k` to move, `Enter` to open, `Esc` to clear.
-- Page shortcuts: `g` plus a page key, for example `g s` for sessions, `g p` for projects, `g c` for costs.
-- Responsive layout with desktop sidebar, collapsible navigation, mobile bottom nav, and mobile menu.
-- Light and dark themes.
+Import is preview-only right now. It shows which sessions are new or already present, but it does not write merged data back into `~/.claude/`, to avoid corrupting live Claude Code files.
 
 ## Multiple Claude Profiles
 
@@ -140,7 +73,7 @@ The active config directory is shown in the CLI banner on launch.
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 20+
 - Claude Code with local data in `~/.claude/`
 
 ### Development
@@ -159,10 +92,17 @@ npm run build
 npm start
 ```
 
-### Lint
+For the packaged standalone bundle used by the CLI:
+
+```bash
+npm run build:dist
+```
+
+### Checks
 
 ```bash
 npm run lint
+npm test
 ```
 
 ## Project Docs
@@ -171,6 +111,7 @@ npm run lint
 - [Known limitations](./docs/LIMITATIONS.md): accuracy, compatibility, and runtime caveats.
 - [Compatibility](./docs/COMPATIBILITY.md): supported local files and reporting guidance.
 - [Contributing](./docs/CONTRIBUTING.md): local setup, PR expectations, and manual test notes.
+- [Team mode](./docs/TEAM.md): shared-folder team analytics, push hub setup, and terminal team digests.
 - [Privacy](./docs/PRIVACY.md): what data is read, exported, or edited.
 - [Security](./docs/SECURITY.md): private vulnerability reporting and review checklist.
 
