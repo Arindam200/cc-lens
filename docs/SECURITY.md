@@ -29,7 +29,7 @@ Please include:
 - No API key requirement.
 - Local Claude Code data stays on the user's machine.
 - The packaged CLI binds to `127.0.0.1` by default.
-- LAN access requires an explicit `HOSTNAME=0.0.0.0` opt-in.
+- LAN access requires an explicit `--host 0.0.0.0` (or `CC_LENS_HOST=0.0.0.0`) opt-in.
 
 ## Local Files Read
 

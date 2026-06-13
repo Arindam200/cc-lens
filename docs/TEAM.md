@@ -39,7 +39,7 @@ reach it (an office box, a small VM, behind your VPN):
 
 ```bash
 # On the hub — pushes are rejected unless a token is set
-CC_LENS_TEAM_TOKEN=<shared-secret> HOSTNAME=0.0.0.0 npx cc-lens
+CC_LENS_TEAM_TOKEN=<shared-secret> npx cc-lens --host 0.0.0.0
 ```
 
 The push endpoint fails closed: without `CC_LENS_TEAM_TOKEN` it returns 401.

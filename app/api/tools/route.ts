@@ -2,7 +2,7 @@ import path from 'path'
 import { NextResponse } from 'next/server'
 import { getSessions, listProjectSlugs, listProjectJSONLFiles, readJSONLLines } from '@/lib/claude-reader'
 import { categorizeTool, isMcpTool, parseMcpTool } from '@/lib/tool-categories'
-import type { ToolsAnalytics, ToolSummary, McpServerSummary, VersionRecord } from '@/types/claude'
+import type { ToolsAnalytics, ToolSummary, SkillSummary, McpServerSummary, VersionRecord } from '@/types/claude'
 
 export const dynamic = 'force-dynamic'
 
@@ -16,6 +16,8 @@ export async function GET() {
   // ── Aggregate tool counts across all sessions ──────────────────────────────
   const toolTotals = new Map<string, number>()
   const toolSessionCount = new Map<string, Set<string>>()
+  const skillTotals = new Map<string, number>()
+  const skillSessionCount = new Map<string, Set<string>>()
   const mcpServerCalls = new Map<string, Map<string, number>>()
   const mcpServerSessions = new Map<string, Set<string>>()
   const errorCategories: Record<string, number> = {}
@@ -40,6 +42,13 @@ export async function GET() {
       }
     }
 
+    // Skill (slash-command) invocations by name
+    for (const [skill, count] of Object.entries(s.skill_counts ?? {})) {
+      skillTotals.set(skill, (skillTotals.get(skill) ?? 0) + count)
+      if (!skillSessionCount.has(skill)) skillSessionCount.set(skill, new Set())
+      skillSessionCount.get(skill)!.add(sid)
+    }
+
     // Error categories
     for (const [cat, count] of Object.entries(s.tool_error_categories ?? {})) {
       errorCategories[cat] = (errorCategories[cat] ?? 0) + count
@@ -59,6 +68,15 @@ export async function GET() {
     .sort((a, b) => b.total_calls - a.total_calls)
 
   const totalToolCalls = tools.reduce((s, t) => s + t.total_calls, 0)
+
+  // ── Build SkillSummary list ────────────────────────────────────────────────
+  const skills: SkillSummary[] = [...skillTotals.entries()]
+    .map(([name, total_calls]) => ({
+      name,
+      total_calls,
+      session_count: skillSessionCount.get(name)?.size ?? 0,
+    }))
+    .sort((a, b) => b.total_calls - a.total_calls)
 
   // ── MCP server summaries ───────────────────────────────────────────────────
   const mcp_servers: McpServerSummary[] = [...mcpServerCalls.entries()]
@@ -147,6 +165,7 @@ export async function GET() {
 
   const result: ToolsAnalytics = {
     tools,
+    skills,
     mcp_servers,
     feature_adoption,
     versions,

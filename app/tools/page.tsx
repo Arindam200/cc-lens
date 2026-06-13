@@ -3,6 +3,7 @@
 import useSWR from 'swr'
 import { TopBar } from '@/components/layout/top-bar'
 import { ToolRankingChart } from '@/components/tools/tool-ranking-chart'
+import { SkillRankingChart } from '@/components/tools/skill-ranking-chart'
 import { McpServerPanel } from '@/components/tools/mcp-server-panel'
 import { FeatureAdoptionTable } from '@/components/tools/feature-adoption-table'
 import { VersionHistoryTable } from '@/components/tools/version-history-table'
@@ -12,7 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
-import { AlertTriangle, Wrench, Server, Zap, GitBranch } from 'lucide-react'
+import { AlertTriangle, Wrench, Server, Zap, GitBranch, Target } from 'lucide-react'
 
 const fetcher = (url: string) =>
   fetch(url).then(r => { if (!r.ok) throw new Error(`API error ${r.status}`); return r.json() })
@@ -131,6 +132,27 @@ export default function ToolsPage() {
                 <ToolRankingChart tools={data.tools} />
               </CardContent>
             </Card>
+
+            {/* Skill (slash-command) usage */}
+            {data.skills.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <CardTitle>Skill Usage</CardTitle>
+                      <CardDescription>
+                        {data.skills.length} {data.skills.length === 1 ? 'skill' : 'skills'} ·{' '}
+                        {data.skills.reduce((s, k) => s + k.total_calls, 0).toLocaleString()} invocations
+                      </CardDescription>
+                    </div>
+                    <Target className="w-4 h-4 text-muted-foreground mt-0.5" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <SkillRankingChart skills={data.skills} />
+                </CardContent>
+              </Card>
+            )}
 
             {/* MCP server details */}
             {data.mcp_servers.length > 0 && (

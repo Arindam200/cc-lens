@@ -9,6 +9,21 @@ This project follows a simple changelog format:
 - `Fixed` for bug fixes
 - `Security` for vulnerability fixes or privacy hardening
 
+## Unreleased
+
+### Added
+
+- Skill (slash-command) usage is now tracked as a first-class dimension. The Tools page ranks invoked skills by call count and session reach, parsed from `Skill` tool calls in session JSONL.
+- CLI flags: `--host` and `--port` (with `CC_LENS_HOST` and `PORT` env equivalents), plus `--help` / `-h` and `--version` / `-v`.
+
+### Changed
+
+- The CLI binds to `127.0.0.1` by default and no longer reads the shell's `HOSTNAME` variable, which some shells, containers, and WSL export as the machine name. This fixes `http://localhost` failing to load and avoids binding wider than intended. Use `--host 0.0.0.0` to opt into LAN access.
+
+### Fixed
+
+- Cache-savings baseline: `cacheEfficiency` now prices cache-creation tokens at the input rate (not the cache-write rate) when computing the no-cache baseline, so the "would have paid" and savings figures are no longer overstated by the cache-write premium.
+
 ## 0.4.0 - 2026-06-13
 
 ### Added

@@ -30,7 +30,7 @@ The app does not require:
 - telemetry
 - cloud sync
 
-The CLI starts a local web server. The packaged CLI binds to `127.0.0.1` by default. If you set `HOSTNAME=0.0.0.0`, you are explicitly making the dashboard reachable from other devices on your network.
+The CLI starts a local web server. The packaged CLI binds to `127.0.0.1` by default. If you pass `--host 0.0.0.0` (or set `CC_LENS_HOST=0.0.0.0`), you are explicitly making the dashboard reachable from other devices on your network.
 
 ## Exports
 
