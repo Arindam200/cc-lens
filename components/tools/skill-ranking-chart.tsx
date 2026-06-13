@@ -10,7 +10,7 @@ export function SkillRankingChart({ skills }: { skills: SkillSummary[] }) {
     return <p className="text-sm text-muted-foreground">No skills invoked yet.</p>
   }
 
-  const max = skills[0]?.total_calls ?? 1
+  const max = Math.max(1, skills[0]?.total_calls ?? 1)
 
   return (
     <div className="space-y-2">

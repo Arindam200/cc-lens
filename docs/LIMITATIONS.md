@@ -26,7 +26,7 @@
 ## Runtime
 
 - The packaged CLI binds to `127.0.0.1` by default.
-- Setting `HOSTNAME=0.0.0.0` makes the dashboard reachable from your local network.
+- Passing `--host 0.0.0.0` (or `CC_LENS_HOST=0.0.0.0`) makes the dashboard reachable from your local network.
 - Large histories can take longer to scan on cold start, although parsed sessions are cached by file modification time.
 
 ## Not Yet Built

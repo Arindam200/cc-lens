@@ -99,6 +99,23 @@ describe('cacheEfficiency', () => {
     expect(result.wouldHavePaidUSD).toBeCloseTo(10)
   })
 
+  it('prices cache-creation tokens at the input rate in the no-cache baseline', () => {
+    // Regression: the counterfactual must bill cache-creation tokens at the input
+    // rate, not the higher cache-write rate (see issue #12 in lib/pricing.ts).
+    const result = cacheEfficiency('claude-opus-4-8', {
+      inputTokens: 0,
+      outputTokens: 0,
+      cacheCreationInputTokens: MTOK,
+      cacheReadInputTokens: 9 * MTOK,
+      costUSD: 0,
+      webSearchRequests: 0,
+    })
+    // baseline = (0 + 9M + 1M) * $5/MTok = $50  (would be $51.25 at cache-write rate)
+    expect(result.wouldHavePaidUSD).toBeCloseTo(50)
+    // savings = 9M * ($5 - $0.50)/MTok = $40.50
+    expect(result.savedUSD).toBeCloseTo(40.5)
+  })
+
   it('returns zero hit rate with no context tokens', () => {
     const result = cacheEfficiency('claude-opus-4-8', {
       inputTokens: 0,
