@@ -11,6 +11,7 @@ import type {
   LiveSession,
 } from '@/types/claude'
 import { slugToPath } from '@/lib/decode'
+import { estimateCostFromUsage } from '@/lib/pricing'
 
 function stripXmlTags(text: string): string {
   return text
@@ -830,6 +831,118 @@ export async function readMemories(): Promise<MemoryEntry[]> {
     )
   } catch { /* skip */ }
   return results.sort((a, b) => b.mtime.localeCompare(a.mtime))
+}
+
+// ─── Recent turns (for rolling usage windows) ──────────────────────────────────
+
+/** One assistant turn reduced to what the usage gauge needs: when it happened,
+ *  what it cost (API-equivalent), and its raw token split. */
+export interface UsageTurn {
+  ts: number
+  model: string
+  costUSD: number
+  inputTokens: number
+  outputTokens: number
+  cacheReadTokens: number
+  cacheWriteTokens: number
+}
+
+// Parsed turns are cached per file, keyed on mtime, so the frequently-polled
+// /api/usage endpoint only re-reads files written since the last scan. Cached
+// rows were filtered with an earlier (smaller) sinceMs; since sinceMs only
+// moves forward, every cached turn stays valid and the window math re-filters
+// by timestamp anyway, so reusing them can't admit stale data.
+const fileTurnsCache = new Map<string, { mtimeMs: number; turns: UsageTurn[] }>()
+
+function extractTurns(filePath: string, sinceMs: number): Promise<UsageTurn[]> {
+  const turns: UsageTurn[] = []
+  return readJSONLLines(filePath, (obj) => {
+    if (obj.type !== 'assistant') return
+    const ts = typeof obj.timestamp === 'string' ? Date.parse(obj.timestamp) : NaN
+    if (isNaN(ts) || ts < sinceMs) return
+    const msg = (obj as { message?: { model?: string; usage?: Record<string, number> } }).message
+    if (!msg?.usage || !msg.model) return
+    const usage = msg.usage
+    turns.push({
+      ts,
+      model: msg.model,
+      costUSD: estimateCostFromUsage(msg.model, {
+        input_tokens: usage.input_tokens ?? 0,
+        output_tokens: usage.output_tokens ?? 0,
+        cache_creation_input_tokens: usage.cache_creation_input_tokens ?? 0,
+        cache_read_input_tokens: usage.cache_read_input_tokens ?? 0,
+      }),
+      inputTokens: usage.input_tokens ?? 0,
+      outputTokens: usage.output_tokens ?? 0,
+      cacheReadTokens: usage.cache_read_input_tokens ?? 0,
+      cacheWriteTokens: usage.cache_creation_input_tokens ?? 0,
+    })
+  }).then(() => turns)
+}
+
+/**
+ * Collect every assistant turn across all projects with a timestamp at or after
+ * `sinceMs`. Files whose mtime predates `sinceMs` can't hold a newer turn, so
+ * they're skipped without opening — this keeps a 7-day scan cheap even with a
+ * large ~/.claude/projects. Unlike getAllParsedSessions (which aggregates per
+ * file), this returns per-turn rows so callers can slice arbitrary time windows.
+ */
+export async function getRecentTurns(sinceMs: number): Promise<UsageTurn[]> {
+  const slugs = await listProjectSlugs().catch(() => [])
+  const turns: UsageTurn[] = []
+
+  await Promise.all(slugs.map(async (slug) => {
+    const files = await listProjectJSONLFiles(slug)
+    await mapPool(files, 16, async (filePath) => {
+      let mtimeMs: number
+      try {
+        mtimeMs = (await fs.stat(filePath)).mtimeMs
+      } catch {
+        fileTurnsCache.delete(filePath) // file vanished
+        return
+      }
+      if (mtimeMs < sinceMs) {
+        fileTurnsCache.delete(filePath) // aged out of the window for good
+        return
+      }
+      const cached = fileTurnsCache.get(filePath)
+      const fileTurns = cached && cached.mtimeMs === mtimeMs
+        ? cached.turns
+        : await extractTurns(filePath, sinceMs)
+      if (!cached || cached.mtimeMs !== mtimeMs) {
+        fileTurnsCache.set(filePath, { mtimeMs, turns: fileTurns })
+      }
+      for (const t of fileTurns) turns.push(t)
+    })
+  }))
+
+  turns.sort((a, b) => a.ts - b.ts)
+  return turns
+}
+
+// ─── Account info (~/.claude.json) ──────────────────────────────────────────────
+
+/** The subset of ~/.claude.json we use to auto-detect the plan for the usage
+ *  gauge. This file lives in $HOME, not under CLAUDE_CONFIG_DIR. */
+export interface ClaudeAccountInfo {
+  organizationType?: string      // e.g. "claude_pro", "claude_max"
+  rateLimitTier?: string         // e.g. "default_claude_ai"
+  hasExtraUsageEnabled?: boolean
+}
+
+export async function readAccountInfo(): Promise<ClaudeAccountInfo> {
+  try {
+    const raw = await fs.readFile(path.join(os.homedir(), '.claude.json'), 'utf-8')
+    const json = JSON.parse(raw) as { oauthAccount?: Record<string, unknown> }
+    const acct = json.oauthAccount ?? {}
+    return {
+      organizationType: typeof acct.organizationType === 'string' ? acct.organizationType : undefined,
+      rateLimitTier: typeof acct.organizationRateLimitTier === 'string' ? acct.organizationRateLimitTier : undefined,
+      hasExtraUsageEnabled: typeof acct.hasExtraUsageEnabled === 'boolean' ? acct.hasExtraUsageEnabled : undefined,
+    }
+  } catch {
+    return {}
+  }
 }
 
 // ─── Storage size ─────────────────────────────────────────────────────────────

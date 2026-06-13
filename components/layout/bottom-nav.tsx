@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, MessageSquare, DollarSign,
-  FolderOpen, Activity, Moon, Sun,
+  Gauge, FolderOpen, Activity, Moon, Sun,
 } from 'lucide-react'
 import { useTheme } from '@/components/theme-provider'
 import { cn } from '@/lib/utils'
@@ -13,6 +13,7 @@ const NAV = [
   { href: '/',         label: 'Overview',  icon: LayoutDashboard },
   { href: '/sessions', label: 'Sessions',  icon: MessageSquare   },
   { href: '/costs',    label: 'Costs',     icon: DollarSign      },
+  { href: '/usage',    label: 'Usage',     icon: Gauge           },
   { href: '/projects', label: 'Projects',  icon: FolderOpen      },
   { href: '/activity', label: 'Activity',  icon: Activity        },
 ]

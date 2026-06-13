@@ -6,6 +6,7 @@ import { mutate } from 'swr'
 import { Search, RefreshCw, Star, Github, Menu } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useSidebar } from '@/components/layout/sidebar-context'
+import { UsagePill } from '@/components/usage/usage-pill'
 import { cn } from '@/lib/utils'
 
 interface TopBarProps {
@@ -73,6 +74,9 @@ export function TopBar({ title, subtitle, showStarButton = false, className }: T
 
       {/* Right: actions */}
       <div className="flex items-center gap-2 shrink-0">
+        {/* Live 5-hour usage gauge — always in view */}
+        <UsagePill />
+
         {/* Mobile hamburger */}
         <Button
           variant="ghost"
