@@ -4,7 +4,8 @@ import { use } from 'react'
 import useSWR from 'swr'
 import { TopBar } from '@/components/layout/top-bar'
 import { SessionSidebar } from '@/components/sessions/replay/session-sidebar'
-import { UserTurnCard, AssistantTurnCard } from '@/components/sessions/replay/turn-cards'
+import { UserTurnCard, AssistantBlock } from '@/components/sessions/replay/turn-cards'
+import { CompactionCard } from '@/components/sessions/replay/compaction-card'
 import { TokenAccumulationChart } from '@/components/sessions/replay/token-accumulation-chart'
 import { SessionBadges } from '@/components/sessions/session-badges'
 import { formatCost, formatTokens, formatDuration, projectDisplayName } from '@/lib/decode'
@@ -87,10 +88,36 @@ export default function SessionDetailPage({ params }: { params: Promise<{ id: st
     }
   }
 
-  // Build compaction map: index of turn before which a compaction occurred
-  const compactionByTurnIndex = new Map(replay.compactions.map(c => [c.turn_index, c]))
+  // Group the flat turn list into conversation blocks. Claude Code splits one
+  // logical response across several assistant lines (thinking, text, each tool
+  // call) interleaved with tool-result "user" turns. We merge those into a single
+  // assistant block, and treat only real user messages (with text) as breaks.
+  const isRealUser = (t: ReplayData['turns'][number]) =>
+    t.type === 'user' && !!(t.text && t.text.trim())
 
-  let assistantTurnNum = 0
+  type Block =
+    | { kind: 'user'; turn: ReplayData['turns'][number]; start: number; end: number }
+    | { kind: 'assistant'; turns: ReplayData['turns'][number][]; start: number; end: number }
+
+  const blocks: Block[] = []
+  for (let i = 0; i < replay.turns.length; ) {
+    const t = replay.turns[i]
+    if (isRealUser(t)) {
+      blocks.push({ kind: 'user', turn: t, start: i, end: i })
+      i++
+      continue
+    }
+    // Assistant run: absorb assistant turns + tool-result-only user turns.
+    const start = i
+    const group: ReplayData['turns'][number][] = []
+    while (i < replay.turns.length && !isRealUser(replay.turns[i])) {
+      if (replay.turns[i].type === 'assistant') group.push(replay.turns[i])
+      i++
+    }
+    if (group.length > 0) blocks.push({ kind: 'assistant', turns: group, start, end: i - 1 })
+  }
+
+  let assistantBlockNum = 0
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -200,30 +227,32 @@ export default function SessionDetailPage({ params }: { params: Promise<{ id: st
       <div className="flex flex-1 overflow-hidden">
         {/* Conversation replay */}
         <div className="flex-1 min-w-0 overflow-y-auto px-4 py-6 max-w-6xl">
-          {replay.turns.map((turn, i) => {
-            const compactionBefore = compactionByTurnIndex.get(i)
+          {blocks.map((block, bi) => {
+            // Compactions that fall within this block's turn range render first.
+            const compactions = replay.compactions.filter(
+              c => c.turn_index >= block.start && c.turn_index <= block.end
+            )
+            const compactionCards = compactions.map(c => <CompactionCard key={c.uuid} event={c} />)
 
-            if (turn.type === 'user') {
+            if (block.kind === 'user') {
               return (
-                <UserTurnCard
-                  key={turn.uuid || i}
-                  turn={turn}
-                  turnNumber={i + 1}
-                  compactionBefore={compactionBefore}
-                  toolResults={toolResults}
-                />
+                <div key={block.turn.uuid || bi}>
+                  {compactionCards}
+                  <UserTurnCard turn={block.turn} />
+                </div>
               )
             }
 
-            assistantTurnNum++
+            assistantBlockNum++
             return (
-              <AssistantTurnCard
-                key={turn.uuid || i}
-                turn={turn}
-                turnNumber={assistantTurnNum}
-                compactionBefore={compactionBefore}
-                toolResults={toolResults}
-              />
+              <div key={block.turns[0]?.uuid || bi}>
+                {compactionCards}
+                <AssistantBlock
+                  turns={block.turns}
+                  blockNumber={assistantBlockNum}
+                  toolResults={toolResults}
+                />
+              </div>
             )
           })}
         </div>
