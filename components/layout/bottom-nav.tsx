@@ -20,7 +20,7 @@ const NAV = [
 
 export function BottomNav() {
   const pathname = usePathname()
-  const { theme, toggle } = useTheme()
+  const { theme, toggle, mounted } = useTheme()
 
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-sidebar border-t border-sidebar-border flex">
@@ -45,7 +45,11 @@ export function BottomNav() {
         aria-label="Toggle theme"
         className="flex-1 flex flex-col items-center justify-center py-2.5 gap-1 transition-colors text-sidebar-foreground/40 hover:text-sidebar-foreground cursor-pointer"
       >
-        {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+        {!mounted
+          ? <span className="block w-4 h-4" aria-hidden />
+          : theme === 'dark'
+            ? <Sun className="w-4 h-4" />
+            : <Moon className="w-4 h-4" />}
         <span className="text-[10px] font-medium leading-none">Theme</span>
       </button>
     </nav>

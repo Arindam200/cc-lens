@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Geist_Mono, Press_Start_2P } from 'next/font/google'
+import { Geist, Geist_Mono, Press_Start_2P } from 'next/font/google'
 import './globals.css'
 import { Sidebar } from '@/components/layout/sidebar'
 import { BottomNav } from '@/components/layout/bottom-nav'
@@ -7,6 +7,11 @@ import { ThemeProvider } from '@/components/theme-provider'
 import { KeyboardNavProvider } from '@/components/keyboard-nav-provider'
 import { SidebarProvider } from '@/components/layout/sidebar-context'
 import { ClientLayout } from '@/components/layout/client-layout'
+
+const geistSans = Geist({
+  variable: '--font-geist-sans',
+  subsets: ['latin'],
+})
 
 const geistMono = Geist_Mono({
   variable: '--font-geist-mono',
@@ -32,7 +37,7 @@ export default function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('theme');document.documentElement.classList.toggle('dark',t!=='light')}catch(e){}})()` }} />
       </head>
-      <body suppressHydrationWarning className={`${geistMono.variable} ${pressStart2P.variable} antialiased`}>
+      <body suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable} ${pressStart2P.variable} antialiased`}>
         <ThemeProvider>
           <SidebarProvider>
             <div className="flex min-h-screen">
