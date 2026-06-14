@@ -69,7 +69,7 @@ export default function TeamPage() {
   return (
     <div className="flex flex-col min-h-screen">
       <TopBar title="Team" subtitle="Aggregated from member exports — no server, no accounts" />
-      <div className="p-6 space-y-6">
+      <div className="t-stagger-group p-6 space-y-6">
 
         {error && (
           <Alert variant="destructive">

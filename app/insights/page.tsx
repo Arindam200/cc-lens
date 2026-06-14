@@ -121,7 +121,7 @@ export default function InsightsPage() {
   return (
     <div className="flex flex-col min-h-screen">
       <TopBar title="Insights" subtitle="Where your Claude Code spend can work harder" />
-      <div className="p-6 space-y-6">
+      <div className="t-stagger-group p-6 space-y-6">
 
         <Tabs value={String(days)} onValueChange={v => setDays(Number(v))}>
           <TabsList>

@@ -1,9 +1,11 @@
 'use client'
 
+import { usePathname } from 'next/navigation'
 import { useSidebar } from '@/components/layout/sidebar-context'
 
 export function ClientLayout({ children }: { children: React.ReactNode }) {
   const { collapsed } = useSidebar()
+  const pathname = usePathname()
   return (
     <main
       className={[
@@ -12,7 +14,10 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
         collapsed ? 'md:ml-14' : 'md:ml-56',
       ].join(' ')}
     >
-      {children}
+      {/* Re-key per route so the page-enter reveal replays on every navigation */}
+      <div key={pathname} className="t-page-enter">
+        {children}
+      </div>
       <footer className="border-t border-border/50 py-3 px-6 flex items-center justify-center mb-16 md:mb-0">
         <p className="text-xs text-muted-foreground">
           Made by{' '}

@@ -139,7 +139,7 @@ export default function TasksPage() {
   return (
     <div className="flex flex-col min-h-screen">
       <TopBar title="claude-code-lens · tasks" subtitle="~/.claude/tasks/" />
-      <div className="p-4 md:p-6 space-y-5">
+      <div className="t-stagger-group p-4 md:p-6 space-y-5">
 
         {error && <p className="text-[#f87171] text-sm font-mono">Error: {String(error)}</p>}
 

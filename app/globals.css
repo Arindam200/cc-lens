@@ -254,6 +254,117 @@
   background: var(--muted-foreground);
 }
 
+/* ─── transitions.dev motion tokens ──────────────────────────────────────── */
+/* Semantic motion vocabulary shared by the dashboard's mount transitions.
+   Values track the transitions.dev tuning (page-side-by-side + texts-reveal +
+   number pop-in). Override here to retune every transition at once. */
+:root {
+  /* Page enter (whole-page blurred rise on navigation) */
+  --page-enter-dur: 320ms;
+  --page-enter-distance: 8px;
+  --page-enter-blur: 3px;
+  --page-enter-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  /* Stagger group (sections that rise with rhythm) */
+  --stagger-dur: 480ms;
+  --stagger-step: 45ms;
+  --stagger-distance: 12px;
+  --stagger-blur: 3px;
+  --stagger-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  /* Number pop-in (hero stat values) */
+  --num-dur: 500ms;
+  --num-distance: 8px;
+  --num-blur: 2px;
+  --num-ease: cubic-bezier(0.34, 1.45, 0.64, 1);
+}
+
+/* Whole page rises + unblurs once on mount. Re-keyed per route so it replays
+   on every navigation. */
+@keyframes t-page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(var(--page-enter-distance));
+    filter: blur(var(--page-enter-blur));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+.t-page-enter {
+  animation: t-page-enter var(--page-enter-dur) var(--page-enter-ease) both;
+}
+
+/* Direct children of a stagger group rise in sequence. The eye lands on the
+   first card, then each following section follows by --stagger-step. */
+@keyframes t-stagger-in {
+  from {
+    opacity: 0;
+    transform: translateY(var(--stagger-distance));
+    filter: blur(var(--stagger-blur));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+.t-stagger-group > * {
+  animation: t-stagger-in var(--stagger-dur) var(--stagger-ease) both;
+  will-change: transform, opacity, filter;
+}
+.t-stagger-group > *:nth-child(1) { animation-delay: calc(var(--stagger-step) * 0); }
+.t-stagger-group > *:nth-child(2) { animation-delay: calc(var(--stagger-step) * 1); }
+.t-stagger-group > *:nth-child(3) { animation-delay: calc(var(--stagger-step) * 2); }
+.t-stagger-group > *:nth-child(4) { animation-delay: calc(var(--stagger-step) * 3); }
+.t-stagger-group > *:nth-child(5) { animation-delay: calc(var(--stagger-step) * 4); }
+.t-stagger-group > *:nth-child(6) { animation-delay: calc(var(--stagger-step) * 5); }
+.t-stagger-group > *:nth-child(7) { animation-delay: calc(var(--stagger-step) * 6); }
+.t-stagger-group > *:nth-child(8) { animation-delay: calc(var(--stagger-step) * 7); }
+.t-stagger-group > *:nth-child(n + 9) { animation-delay: calc(var(--stagger-step) * 8); }
+
+/* Number re-enters with a blurred pop when its value changes (key remounts it). */
+@keyframes t-num-pop {
+  from {
+    opacity: 0;
+    transform: translateY(var(--num-distance));
+    filter: blur(var(--num-blur));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+.t-num {
+  display: inline-block;
+  animation: t-num-pop var(--num-dur) var(--num-ease) both;
+}
+
+/* Cards warm their edge on hover — a quiet lift in attention, no layout shift. */
+@media (hover: hover) {
+  [data-slot="card"] {
+    transition:
+      border-color 250ms var(--page-enter-ease),
+      box-shadow 250ms var(--page-enter-ease);
+  }
+  [data-slot="card"]:hover {
+    border-color: color-mix(in oklab, var(--border) 55%, var(--foreground) 14%);
+  }
+}
+
+/* Respect users who asked the OS for less motion: drop the entrances entirely. */
+@media (prefers-reduced-motion: reduce) {
+  .t-page-enter,
+  .t-stagger-group > *,
+  .t-num {
+    animation: none !important;
+  }
+  [data-slot="card"] {
+    transition: none !important;
+  }
+}
+
 /* ─── Terminal glow utilities ────────────────────────────────────────────── */
 .glow-orange {
   text-shadow: 0 0 10px rgba(217, 119, 6, 0.5);

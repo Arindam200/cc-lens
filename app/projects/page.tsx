@@ -66,7 +66,7 @@ export default function ProjectsPage() {
         title="Projects"
         subtitle={data ? `${data.projects.length} projects` : 'Loading…'}
       />
-      <div className="p-6 space-y-4">
+      <div className="t-stagger-group p-6 space-y-4">
 
         {error && (
           <Alert variant="destructive">

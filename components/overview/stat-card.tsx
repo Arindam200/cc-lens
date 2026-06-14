@@ -56,7 +56,8 @@ export function StatCard({ title, value, description, trend, sparkData, accentCo
           className="text-3xl font-bold tabular-nums leading-none tracking-tight"
           style={{ color: resolvedAccent }}
         >
-          {value}
+          {/* key by value so the digit pop-in replays when the figure changes */}
+          <span key={value} className="t-num">{value}</span>
         </p>
         {description && (
           <p className="text-xs text-muted-foreground leading-snug">{description}</p>
