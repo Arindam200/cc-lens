@@ -22,6 +22,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
+    // Deliberate one-time sync from localStorage after mount: starting from a
+    // fixed 'dark' keeps the first client render identical to SSR, then we adopt
+    // the persisted theme. This is an external-store read, not a render loop.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTheme(localStorage.getItem('theme') === 'light' ? 'light' : 'dark')
     setMounted(true)
   }, [])
