@@ -357,7 +357,7 @@ export function OverviewClient() {
     rangeMetrics.messageTrend !== undefined && !isNaN(rangeMetrics.messageTrend)
 
   return (
-    <div className="space-y-4 bg-background px-4 py-6 md:px-6">
+    <div className="t-stagger-group space-y-4 bg-background px-4 py-6 md:px-6">
 
       {/* ── Page header ───────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

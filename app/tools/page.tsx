@@ -24,7 +24,7 @@ export default function ToolsPage() {
   return (
     <div className="flex flex-col min-h-screen">
       <TopBar title="Tools & Features" subtitle="Every tool call, MCP server, and feature" />
-      <div className="p-6 space-y-6">
+      <div className="t-stagger-group p-6 space-y-6">
 
         {error && (
           <Alert variant="destructive">

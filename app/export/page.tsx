@@ -205,7 +205,7 @@ export default function ExportPage() {
         subtitle="Download a portable backup of ~/.claude/ analytics or merge data from another machine"
       />
 
-      <div className="p-6 space-y-6 flex-1">
+      <div className="t-stagger-group p-6 space-y-6 flex-1">
         {previewError && (
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
