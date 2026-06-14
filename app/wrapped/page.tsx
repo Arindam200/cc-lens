@@ -212,7 +212,12 @@ export default function WrappedPage() {
   useEffect(() => {
     let active = true
     fetch('/logo.png')
-      .then(r => r.blob())
+      .then(r => {
+        if (!r.ok) throw new Error(`logo fetch failed (${r.status})`)
+        const type = r.headers.get('content-type') ?? ''
+        if (!type.startsWith('image/')) throw new Error(`logo not an image (${type})`)
+        return r.blob()
+      })
       .then(blob => new Promise<string>((resolve, reject) => {
         const fr = new FileReader()
         fr.onload = () => resolve(fr.result as string)

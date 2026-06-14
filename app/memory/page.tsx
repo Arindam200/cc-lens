@@ -110,6 +110,17 @@ function MemoryCard({ entry, onClick, expanded }: { entry: MemoryEntry; onClick:
         expanded ? 'lg:col-span-2 xl:col-span-3' : 'hover:border-primary/30',
       ].join(' ')}
       onClick={editing ? undefined : onClick}
+      {...(!editing && {
+        role: 'button',
+        tabIndex: 0,
+        'aria-expanded': expanded,
+        onKeyDown: (e: React.KeyboardEvent) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            onClick()
+          }
+        },
+      })}
       style={expanded ? { borderColor: m.dot + '66' } : undefined}
     >
       <div className="px-4 py-3.5 flex items-start gap-3">

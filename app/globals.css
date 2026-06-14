@@ -311,7 +311,6 @@
 }
 .t-stagger-group > * {
   animation: t-stagger-in var(--stagger-dur) var(--stagger-ease) both;
-  will-change: transform, opacity, filter;
 }
 .t-stagger-group > *:nth-child(1) { animation-delay: calc(var(--stagger-step) * 0); }
 .t-stagger-group > *:nth-child(2) { animation-delay: calc(var(--stagger-step) * 1); }
