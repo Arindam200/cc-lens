@@ -50,7 +50,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-mono);
+  --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -101,26 +101,26 @@
 
 /* ─── Light theme (default) — higher contrast, clearer surfaces ─────────── */
 :root {
-  --radius: 0.375rem;
-  /* Zinc-based neutrals: page vs cards vs chrome read as distinct layers */
-  --background: #f4f4f5;
-  --foreground: #18181b;
+  --radius: 0.625rem;
+  /* Sharp, minimal light surface (Vercel/Linear-light): white cards, soft page, thin neutral borders */
+  --background: #f7f7f8;
+  --foreground: #131316;
   --card: #ffffff;
-  --card-foreground: #18181b;
+  --card-foreground: #131316;
   --popover: #ffffff;
-  --popover-foreground: #18181b;
+  --popover-foreground: #131316;
   --primary: #f97316;
   --primary-foreground: #ffffff;
-  --secondary: #e4e4e7;
-  --secondary-foreground: #27272a;
-  --muted: #ececee;
-  --muted-foreground: #52525b;
-  --accent: #e4e4e7;
-  --accent-foreground: #18181b;
+  --secondary: #f1f1f3;
+  --secondary-foreground: #131316;
+  --muted: #f3f3f5;
+  --muted-foreground: #62656c;
+  --accent: #f1f1f3;
+  --accent-foreground: #131316;
   --destructive: #dc2626;
-  --border: #d4d4d8;
+  --border: #e8e8eb;
   /* Input border token: visible edge on white fields */
-  --input: #d4d4d8;
+  --input: #e3e3e6;
   --ring: #f97316;
   --viz-sky: #1d4ed8;
   /* Tool / category colors (light) — saturated, distinct; SVG uses solid fill (no color-mix) */
@@ -143,35 +143,36 @@
   --chart-3: var(--viz-sky);
   --chart-4: #7c3aed;
   --chart-5: #d97706;
-  --sidebar: #fafafa;
+  --sidebar: #fbfbfc;
   --sidebar-foreground: #3f3f46;
   --sidebar-primary: #f97316;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #e4e4e7;
-  --sidebar-accent-foreground: #18181b;
-  --sidebar-border: #d4d4d8;
+  --sidebar-accent: #f1f1f3;
+  --sidebar-accent-foreground: #131316;
+  --sidebar-border: #e8e8eb;
   --sidebar-ring: #f97316;
 }
 
 /* ─── Dark theme ─────────────────────────────────────────────────────────── */
 .dark {
-  --background: #0f1117;
-  --foreground: #e8eaed;
-  --card: #171921;
-  --card-foreground: #e8eaed;
-  --popover: #171921;
-  --popover-foreground: #e8eaed;
+  /* Linear-style dark: near-black page, clearly-lifted card surface, crisp borders, restrained orange */
+  --background: #0a0a0b;
+  --foreground: #f7f8f8;
+  --card: #1a1b1f;
+  --card-foreground: #f7f8f8;
+  --popover: #1f2024;
+  --popover-foreground: #f7f8f8;
   --primary: #d97706;
-  --primary-foreground: #0f1117;
-  --secondary: #1e212b;
-  --secondary-foreground: #d1d5db;
-  --muted: #1e212b;
-  --muted-foreground: #94a3b8;
-  --accent: #1e212b;
-  --accent-foreground: #e8eaed;
+  --primary-foreground: #0a0a0b;
+  --secondary: #232429;
+  --secondary-foreground: #e4e4e7;
+  --muted: #1f2024;
+  --muted-foreground: #9096a0;
+  --accent: #26272c;
+  --accent-foreground: #f7f8f8;
   --destructive: #f87171;
-  --border: #262a36;
-  --input: #1e212b;
+  --border: #2b2c31;
+  --input: #2b2c31;
   --ring: #d97706;
   --viz-sky: #60a5fa;
   --viz-tool-read: #60a5fa;
@@ -193,13 +194,13 @@
   --chart-3: var(--viz-sky);
   --chart-4: #a78bfa;
   --chart-5: #fbbf24;
-  --sidebar: #0b0d12;
-  --sidebar-foreground: #d1d5db;
+  --sidebar: #0c0c0e;
+  --sidebar-foreground: #b4b8bf;
   --sidebar-primary: #d97706;
-  --sidebar-primary-foreground: #0f1117;
-  --sidebar-accent: #1a1d26;
-  --sidebar-accent-foreground: #e8eaed;
-  --sidebar-border: #1a1d26;
+  --sidebar-primary-foreground: #0a0a0b;
+  --sidebar-accent: #1a1a1d;
+  --sidebar-accent-foreground: #f7f8f8;
+  --sidebar-border: #1c1c1f;
   --sidebar-ring: #d97706;
 }
 
@@ -209,17 +210,32 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: var(--font-geist-mono), "JetBrains Mono", "Fira Code", "Consolas", monospace;
-    font-size: 15px;
+    font-family: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system,
+      "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    letter-spacing: -0.006em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  /* Numerals, costs, token counts, IDs read as data — keep them monospace */
+  .font-mono,
+  .tabular-nums {
+    font-family: var(--font-geist-mono), "JetBrains Mono", ui-monospace, monospace;
+    font-feature-settings: "tnum" 1;
   }
 }
 
-/* ─── Light mode: subtle depth on cards (matches orange-700 primary) ───── */
+/* ─── Card surface: sharp, minimal (Linear) — border-defined, whisper shadow ─── */
 :root:not(.dark) [data-slot="card"] {
   box-shadow:
-    0 1px 2px 0 rgba(24, 24, 27, 0.04),
-    0 4px 16px -2px rgba(249, 115, 22, 0.08),
-    0 0 0 1px rgba(24, 24, 27, 0.05);
+    0 1px 2px 0 rgba(19, 19, 22, 0.04),
+    0 1px 3px 0 rgba(19, 19, 22, 0.03);
+}
+.dark [data-slot="card"] {
+  box-shadow:
+    0 1px 2px 0 rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.03);
 }
 
 /* ─── Scrollbar ──────────────────────────────────────────────────────────── */
@@ -259,5 +275,5 @@
 .recharts-text {
   fill: var(--muted-foreground) !important;
   font-family: var(--font-geist-mono), monospace !important;
-  font-size: 13px !important;
+  font-size: 12px !important;
 }

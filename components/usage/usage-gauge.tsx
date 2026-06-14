@@ -43,11 +43,14 @@ export function UsageGauge({
   title,
   window: w,
   rollingLabel,
+  showTitle = true,
 }: {
   title: string
   window: GaugeWindow
   /** Shown under the gauge when there's no fixed reset (rolling 7-day). */
   rollingLabel?: string
+  /** Hide the built-in title when the parent card already shows one. */
+  showTitle?: boolean
 }) {
   const open = w.startMs !== null
   const fraction = Math.min(w.fraction, 1)
@@ -56,37 +59,39 @@ export function UsageGauge({
   const c = thresholdColor(w.fraction)
   const countdown = useCountdown(w.resetMs)
 
-  const R = 52
-  const STROKE = 11
+  const R = 58
+  const STROKE = 9
   const C = 2 * Math.PI * R
   const offset = C * (1 - (open ? fraction : 0))
 
   return (
-    <div className="flex flex-col items-center gap-3">
-      <div className="text-sm font-medium text-muted-foreground">{title}</div>
+    <div className="flex flex-col items-center gap-4">
+      {showTitle && <div className="text-sm font-medium text-muted-foreground">{title}</div>}
 
-      <div className="relative h-[140px] w-[140px]">
-        <svg viewBox="0 0 140 140" className="h-full w-full -rotate-90">
-          <circle cx="70" cy="70" r={R} fill="none" strokeWidth={STROKE}
-            className="stroke-muted/40" />
+      <div className="relative h-[150px] w-[150px]">
+        <svg viewBox="0 0 150 150" className="h-full w-full -rotate-90">
+          <circle cx="75" cy="75" r={R} fill="none" strokeWidth={STROKE}
+            className="stroke-muted" strokeLinecap="round" />
           {open && (
             <circle
-              cx="70" cy="70" r={R} fill="none" strokeWidth={STROKE} strokeLinecap="round"
+              cx="75" cy="75" r={R} fill="none" strokeWidth={STROKE} strokeLinecap="round"
               stroke={c.stroke} strokeDasharray={C} strokeDashoffset={offset}
-              style={{ transition: 'stroke-dashoffset 0.6s ease, stroke 0.3s', filter: `drop-shadow(0 0 6px ${c.glow})` }}
+              style={{ transition: 'stroke-dashoffset 0.6s ease, stroke 0.3s' }}
             />
           )}
         </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-0.5">
           {open ? (
             <>
-              <span className={cn('text-3xl font-bold tabular-nums', c.text)}>{pct}</span>
-              <span className="text-[11px] text-muted-foreground">{over ? 'over est. cap' : 'used'}</span>
+              <span className={cn('text-4xl font-bold tabular-nums tracking-tight', c.text)}>{pct}</span>
+              <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                {over ? 'over est. cap' : 'used'}
+              </span>
             </>
           ) : (
             <>
-              <span className="text-xl font-semibold text-emerald-500">Ready</span>
-              <span className="text-[11px] text-muted-foreground">window idle</span>
+              <span className="text-2xl font-semibold text-emerald-500">Ready</span>
+              <span className="text-[11px] uppercase tracking-wide text-muted-foreground">window idle</span>
             </>
           )}
         </div>
@@ -107,11 +112,11 @@ export function UsageGauge({
       </div>
 
       {/* Detail line */}
-      <div className="flex items-center gap-3 text-xs text-muted-foreground tabular-nums">
-        <span><span className="text-foreground font-medium">{formatCost(w.costUSD)}</span> / {formatCost(w.capUSD)}</span>
-        <span className="opacity-40">·</span>
+      <div className="flex w-full items-center justify-center gap-2.5 border-t border-border pt-3 text-xs text-muted-foreground tabular-nums">
+        <span><span className="font-medium text-foreground">{formatCost(w.costUSD)}</span> / {formatCost(w.capUSD)}</span>
+        <span className="text-border">·</span>
         <span>{formatTokens(w.totalTokens)} tok</span>
-        <span className="opacity-40">·</span>
+        <span className="text-border">·</span>
         <span>{w.turnCount} turns</span>
       </div>
     </div>

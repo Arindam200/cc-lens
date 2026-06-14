@@ -1,8 +1,10 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import useSWR from 'swr'
-import { BarChart3, PieChart, Clock, CalendarDays } from 'lucide-react'
+import { BarChart3, PieChart, Clock, CalendarDays, ArrowRight, FolderGit2, MessagesSquare, Coins } from 'lucide-react'
+import { Delta, DeltaIcon, DeltaValue } from '@/components/delta'
 import { UsageOverTimeChart } from '@/components/overview/usage-over-time-chart'
 import { ModelBreakdownDonut } from '@/components/overview/model-breakdown-donut'
 import { ProjectActivityDonut } from '@/components/overview/project-activity-donut'
@@ -351,9 +353,11 @@ export function OverviewClient() {
     rangeMetrics.totalOutputTokens +
     rangeMetrics.totalCacheReadTokens +
     rangeMetrics.totalCacheWriteTokens
+  const hasMessageTrend =
+    rangeMetrics.messageTrend !== undefined && !isNaN(rangeMetrics.messageTrend)
 
   return (
-    <div className="px-6 py-6 space-y-6 bg-background">
+    <div className="space-y-4 bg-background px-4 py-6 md:px-6">
 
       {/* ── Page header ───────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -406,10 +410,8 @@ export function OverviewClient() {
         </div>
       </div>
 
-      
-
-      {/* ── Stat cards ────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* ── Bento: stat cards + headline charts ───────────────────────────── */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Sessions"
           value={rangeMetrics.sessionCount.toLocaleString()}
@@ -442,21 +444,28 @@ export function OverviewClient() {
           sparkData={rangeMetrics.costSpark}
           accentColor="#34d399"
         />
-      </div>
-      
 
-      {/* ── Main charts row ───────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
-        <Card>
+        {/* Usage over time — headline chart */}
+        <Card className="sm:col-span-2 lg:col-span-3">
           <CardHeader>
-            <div className="flex items-start justify-between">
-              <div>
-                <CardTitle>Usage Over Time</CardTitle>
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-1.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <CardTitle>Usage Over Time</CardTitle>
+                  {hasMessageTrend && (
+                    <Delta value={rangeMetrics.messageTrend!} variant="badge">
+                      <DeltaIcon variant="trend" />
+                      <DeltaValue />
+                    </Delta>
+                  )}
+                </div>
                 <CardDescription>
                   Messages and sessions — last {chartDays} days
                 </CardDescription>
               </div>
-              <BarChart3 className="w-4 h-4 text-muted-foreground mt-0.5" />
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border bg-muted/50 text-muted-foreground [&_svg]:size-4">
+                <BarChart3 />
+              </span>
             </div>
           </CardHeader>
           <CardContent>
@@ -469,14 +478,17 @@ export function OverviewClient() {
           </CardContent>
         </Card>
 
-        <Card>
+        {/* Model distribution */}
+        <Card className="sm:col-span-2 lg:col-span-1">
           <CardHeader>
-            <div className="flex items-start justify-between">
-              <div>
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-1.5">
                 <CardTitle>Model Distribution</CardTitle>
-                <CardDescription>Token usage by model in selected range</CardDescription>
+                <CardDescription>Tokens by model</CardDescription>
               </div>
-              <PieChart className="w-4 h-4 text-muted-foreground mt-0.5" />
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border bg-muted/50 text-muted-foreground [&_svg]:size-4">
+                <PieChart />
+              </span>
             </div>
           </CardHeader>
           <CardContent>
@@ -489,15 +501,17 @@ export function OverviewClient() {
       <LiveSessionsPanel />
       
       {/* ── Secondary charts row ──────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <div className="flex items-start justify-between">
-              <div>
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-1.5">
                 <CardTitle>Peak Hours</CardTitle>
                 <CardDescription>Activity by hour of day in selected range</CardDescription>
               </div>
-              <Clock className="w-4 h-4 text-muted-foreground mt-0.5" />
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border bg-muted/50 text-muted-foreground [&_svg]:size-4">
+                <Clock />
+              </span>
             </div>
           </CardHeader>
           <CardContent>
@@ -505,27 +519,44 @@ export function OverviewClient() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="gap-0 pb-0">
           <CardHeader>
-            <div className="flex items-start justify-between">
-              <div>
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-1.5">
                 <CardTitle>Project Activity</CardTitle>
                 <CardDescription>Distribution across projects in selected range</CardDescription>
               </div>
-              <PieChart className="w-4 h-4 text-muted-foreground mt-0.5" />
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border bg-muted/50 text-muted-foreground [&_svg]:size-4">
+                <FolderGit2 />
+              </span>
             </div>
           </CardHeader>
           <CardContent>
             <ProjectActivityDonut projects={rangeMetrics.projects} />
           </CardContent>
+          <div className="mt-2 flex justify-center border-t py-2">
+            <Button asChild size="sm" variant="ghost" className="text-muted-foreground">
+              <Link href="/projects">
+                View all projects
+                <ArrowRight className="size-3.5" />
+              </Link>
+            </Button>
+          </div>
         </Card>
       </div>
 
       {/* ── Token breakdown ───────────────────────────────────────────────── */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle>Token Breakdown</CardTitle>
-          <CardDescription>Distribution across token types in selected range</CardDescription>
+          <div className="flex items-start justify-between gap-3">
+            <div className="space-y-1.5">
+              <CardTitle>Token Breakdown</CardTitle>
+              <CardDescription>Distribution across token types in selected range</CardDescription>
+            </div>
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border bg-muted/50 text-muted-foreground [&_svg]:size-4">
+              <Coins />
+            </span>
+          </div>
         </CardHeader>
         <CardContent className="space-y-3">
           {totalTokens > 0 ? (
@@ -568,14 +599,29 @@ export function OverviewClient() {
       </Card>
 
       {/* ── Recent sessions ───────────────────────────────────────────────── */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Sessions</CardTitle>
-          <CardDescription>Your latest Claude Code conversations in selected range</CardDescription>
+      <Card className="gap-0">
+        <CardHeader className="border-b [.border-b]:pb-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="space-y-1.5">
+              <CardTitle>Recent Sessions</CardTitle>
+              <CardDescription>Your latest Claude Code conversations in selected range</CardDescription>
+            </div>
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border bg-muted/50 text-muted-foreground [&_svg]:size-4">
+              <MessagesSquare />
+            </span>
+          </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-4">
           <OverviewConversationTable sessions={rangeMetrics.sessions} />
         </CardContent>
+        <div className="flex justify-center border-t py-2">
+          <Button asChild size="sm" variant="ghost" className="text-muted-foreground">
+            <Link href="/sessions">
+              View all sessions
+              <ArrowRight className="size-3.5" />
+            </Link>
+          </Button>
+        </div>
       </Card>
 
     </div>

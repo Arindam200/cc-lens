@@ -6,7 +6,7 @@ import { categoryColorMix, toolBarColor } from '@/lib/tool-categories'
 import type { ProjectSummary } from '@/types/claude'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Clock, MessageSquare, GitBranch, Plug, Bot } from 'lucide-react'
+import { GitBranch, Plug, Bot, ArrowUpRight } from 'lucide-react'
 
 const LANG_COLORS: Record<string, string> = {
   TypeScript:  'bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/25',
@@ -51,125 +51,113 @@ export function ProjectCard({ project }: { project: ProjectSummary }) {
   const topTools = Object.entries(project.tool_counts ?? {})
     .sort(([, a], [, b]) => b - a)
     .slice(0, 5)
-  const maxToolCount = topTools[0]?.[1] ?? 1
+  const toolTotal = topTools.reduce((sum, [, c]) => sum + c, 0) || 1
 
   const topLangs = Object.entries(project.languages ?? {})
     .sort(([, a], [, b]) => b - a)
-    .slice(0, 4)
+    .slice(0, 3)
+
+  const linesAdded = project.total_lines_added ?? 0
+  const linesRemoved = project.total_lines_removed ?? 0
 
   return (
-    <Link href={`/projects/${project.slug}`} className="block group">
-      <Card className="h-full gap-0 py-0 hover:border-primary/40 transition-colors overflow-hidden">
-        <CardHeader className="px-4 pt-4 pb-3 gap-2">
+    <Link href={`/projects/${project.slug}`} className="group block">
+      <Card className="h-full gap-0 overflow-hidden py-0 transition-all duration-200 hover:border-primary/40 hover:shadow-md">
+        <CardHeader className="gap-2.5 px-4 pt-4 pb-3">
           {/* Title row */}
           <div className="flex items-start justify-between gap-2">
-            <h3 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors truncate leading-snug">
-              {project.display_name}
-            </h3>
-            <span className="text-[11px] text-muted-foreground/60 whitespace-nowrap shrink-0 mt-0.5">
+            <div className="min-w-0">
+              <h3 className="flex items-center gap-1 truncate text-[15px] font-semibold leading-snug text-foreground transition-colors group-hover:text-primary">
+                {project.display_name}
+                <ArrowUpRight className="size-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+              </h3>
+              <p className="mt-0.5 truncate font-mono text-[11px] text-muted-foreground/70">
+                {project.project_path}
+              </p>
+            </div>
+            <span className="shrink-0 whitespace-nowrap text-[11px] text-muted-foreground">
               {formatRelativeDate(project.last_active)}
             </span>
           </div>
 
-          {/* Path */}
-          <p className="text-[11px] text-muted-foreground/50 font-mono truncate -mt-1">
-            {project.project_path}
-          </p>
-
           {/* Language + feature badges */}
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
             {topLangs.map(([lang]) => (
-              <Badge key={lang} variant="outline" className={`text-[11px] px-1.5 py-0 h-5 ${langColor(lang)}`}>
+              <Badge key={lang} variant="outline" className={`h-5 px-1.5 py-0 text-[11px] font-medium ${langColor(lang)}`}>
                 {lang}
               </Badge>
             ))}
             {project.uses_mcp && (
-              <Badge variant="outline" className="text-[11px] px-1.5 py-0 h-5 bg-blue-500/10 text-blue-500 border-blue-500/20 gap-1">
-                <Plug className="w-2.5 h-2.5" /> MCP
+              <Badge variant="outline" className="h-5 gap-1 border-blue-500/20 bg-blue-500/10 px-1.5 py-0 text-[11px] text-blue-500">
+                <Plug className="size-2.5" /> MCP
               </Badge>
             )}
             {project.uses_task_agent && (
-              <Badge variant="outline" className="text-[11px] px-1.5 py-0 h-5 bg-purple-500/10 text-purple-500 border-purple-500/20 gap-1">
-                <Bot className="w-2.5 h-2.5" /> Agent
+              <Badge variant="outline" className="h-5 gap-1 border-purple-500/20 bg-purple-500/10 px-1.5 py-0 text-[11px] text-purple-500">
+                <Bot className="size-2.5" /> Agent
               </Badge>
             )}
             {project.branches.length > 0 && (
-              <>
-                <span
-                  className="h-4 w-px shrink-0 self-center bg-border/50"
-                  aria-hidden
-                />
-                <GitBranch className="h-3 w-3 shrink-0 self-center text-muted-foreground/45" aria-hidden />
-                {project.branches.slice(0, 3).map(b => (
-                  <Badge
-                    key={b}
-                    variant="outline"
-                    className="h-5 max-w-28 truncate border-border/50 px-1.5 py-0 font-mono text-[11px] text-muted-foreground/80"
-                    title={b}
-                  >
-                    {b}
-                  </Badge>
-                ))}
-                {project.branches.length > 3 && (
-                  <span className="self-center text-[11px] text-muted-foreground/45">
-                    +{project.branches.length - 3}
-                  </span>
+              <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                <GitBranch className="size-3 shrink-0" aria-hidden />
+                <span className="max-w-28 truncate font-mono" title={project.branches.join(', ')}>
+                  {project.branches[0]}
+                </span>
+                {project.branches.length > 1 && (
+                  <span className="text-muted-foreground/60">+{project.branches.length - 1}</span>
                 )}
-              </>
+              </span>
             )}
           </div>
         </CardHeader>
 
-        <CardContent className="px-4 pb-4 space-y-3">
-          {/* Stats row */}
-          <div className="flex items-center gap-3 text-[12px] text-muted-foreground">
-            <span className="flex items-center gap-1">
-              <MessageSquare className="w-3 h-3" />
-              {project.session_count} sessions
-            </span>
-            <span className="text-border">·</span>
-            <span className="flex items-center gap-1">
-              <Clock className="w-3 h-3" />
-              {formatDuration(project.total_duration_minutes)}
-            </span>
-            {(project.total_lines_added ?? 0) > 0 && (
-              <>
-                <span className="text-border">·</span>
-                <span className="text-emerald-500 font-mono">+{project.total_lines_added.toLocaleString()}</span>
-                <span className="text-red-400 font-mono">-{project.total_lines_removed.toLocaleString()}</span>
-              </>
-            )}
+        <CardContent className="flex flex-col gap-3 px-4 pb-4">
+          {/* Key metrics strip */}
+          <div className="grid grid-cols-3 divide-x divide-border rounded-lg border border-border bg-muted/30">
+            <Metric label="Sessions" value={project.session_count.toLocaleString()} />
+            <Metric label="Time" value={formatDuration(project.total_duration_minutes)} />
+            <Metric label="Est. cost" value={formatCost(project.estimated_cost)} accent />
           </div>
 
-          {/* Tool bar chart */}
+          {/* Tool distribution — single stacked bar + legend */}
           {topTools.length > 0 && (
-            <div className="space-y-1">
-              {topTools.map(([tool, count]) => {
-                const color = toolBarColor(tool)
-                const width = Math.max(8, Math.round((count / maxToolCount) * 100))
-                return (
-                  <div key={tool} className="flex items-center gap-2 text-[11px]">
-                    <span className="text-muted-foreground/50 w-16 truncate">{tool}</span>
-                    <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-                      <div
-                        className="h-full rounded-full transition-all"
-                        style={{ width: `${width}%`, backgroundColor: categoryColorMix(color, 58) }}
-                      />
-                    </div>
-                    <span className="text-muted-foreground/40 w-7 text-right tabular-nums">{count}</span>
-                  </div>
-                )
-              })}
+            <div className="space-y-1.5">
+              <div className="flex h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                {topTools.map(([tool, count]) => (
+                  <div
+                    key={tool}
+                    title={`${tool}: ${count.toLocaleString()}`}
+                    style={{
+                      width: `${(count / toolTotal) * 100}%`,
+                      backgroundColor: categoryColorMix(toolBarColor(tool), 60),
+                    }}
+                  />
+                ))}
+              </div>
+              <div className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
+                <span className="truncate">{topTools.map(([t]) => t).join(' · ')}</span>
+                {linesAdded + linesRemoved > 0 && (
+                  <span className="shrink-0 font-mono tabular-nums">
+                    <span className="text-emerald-500">+{linesAdded.toLocaleString()}</span>{' '}
+                    <span className="text-rose-400">−{linesRemoved.toLocaleString()}</span>
+                  </span>
+                )}
+              </div>
             </div>
           )}
-
-          {/* Cost footer */}
-          <div className="flex items-center justify-between pt-2 border-t border-border/30">
-            <span className="text-[11px] text-muted-foreground/50">Est. cost</span>
-            <span className="text-sm font-bold text-primary tabular-nums">{formatCost(project.estimated_cost)}</span>
-          </div>
         </CardContent>
       </Card>
     </Link>
+  )
+}
+
+function Metric({ label, value, accent = false }: { label: string; value: string; accent?: boolean }) {
+  return (
+    <div className="flex flex-col gap-0.5 px-3 py-2">
+      <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{label}</span>
+      <span className={`truncate text-sm font-semibold tabular-nums ${accent ? 'text-primary' : 'text-foreground'}`}>
+        {value}
+      </span>
+    </div>
   )
 }

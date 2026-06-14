@@ -19,5 +19,7 @@
     "lib": "@/lib",
     "hooks": "@/components"
   },
-  "registries": {}
+  "registries": {
+    "@efferd": "https://efferd.com/r/{style}/{name}.json"
+  }
 }
