@@ -2,7 +2,11 @@
 
 import { useState, useMemo } from 'react'
 import useSWR, { mutate } from 'swr'
+import { Brain, FolderGit2, MessagesSquare, Clock3, Search, Pencil } from 'lucide-react'
 import { TopBar } from '@/components/layout/top-bar'
+import { Card, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
 import type { MemoryEntry, MemoryType } from '@/lib/claude-reader'
 import { projectDisplayName, projectShortPath, formatRelativeDate } from '@/lib/decode'
 
@@ -26,7 +30,7 @@ type FilterType = typeof FILTER_TYPES[number]
 function TypeBadge({ type }: { type: MemoryType }) {
   const m = TYPE_META[type] ?? TYPE_META.unknown
   return (
-    <span className={`text-[10px] font-mono font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${m.color} ${m.bg} ${m.border}`}>
+    <span className={`text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded border ${m.color} ${m.bg} ${m.border}`}>
       {m.label}
     </span>
   )
@@ -37,7 +41,7 @@ function StaleBadge({ mtime }: { mtime: string }) {
   const daysOld = Math.floor((Date.now() - new Date(mtime).getTime()) / 86_400_000)
   if (daysOld < 30) return null
   return (
-    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border border-[#f87171]/30 bg-[#f87171]/10 text-[#f87171]">
+    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded border border-[#f87171]/30 bg-[#f87171]/10 text-[#f87171]">
       stale
     </span>
   )
@@ -99,12 +103,11 @@ function MemoryCard({ entry, onClick, expanded }: { entry: MemoryEntry; onClick:
   }
 
   return (
-    <div
+    <Card
       className={[
-        'border rounded-lg bg-card transition-all',
+        'gap-0 py-0 transition-colors',
         editing ? 'cursor-default' : 'cursor-pointer',
-        expanded ? '' : 'hover:border-primary/30',
-        'border-border',
+        expanded ? 'lg:col-span-2 xl:col-span-3' : 'hover:border-primary/30',
       ].join(' ')}
       onClick={editing ? undefined : onClick}
       style={expanded ? { borderColor: m.dot + '66' } : undefined}
@@ -123,28 +126,30 @@ function MemoryCard({ entry, onClick, expanded }: { entry: MemoryEntry; onClick:
             <TypeBadge type={entry.type} />
             <StaleBadge mtime={entry.mtime} />
             {expanded && !editing && (
-              <button
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={handleEdit}
-                className="ml-auto text-[10px] font-mono px-2 py-0.5 rounded border border-border text-muted-foreground hover:border-primary/40 hover:text-foreground transition-colors"
+                className="ml-auto h-7 gap-1.5 px-2.5 text-xs"
               >
-                edit
-              </button>
+                <Pencil className="size-3" /> Edit
+              </Button>
             )}
           </div>
 
           {/* Description */}
           {entry.description && (
-            <p className="text-xs font-mono text-muted-foreground">{entry.description}</p>
+            <p className="text-xs text-muted-foreground leading-relaxed">{entry.description}</p>
           )}
 
           {/* Body preview (collapsed) */}
           {!expanded && preview && (
-            <p className="text-xs font-mono text-muted-foreground/60 line-clamp-2">{preview}</p>
+            <p className="text-xs text-muted-foreground/70 line-clamp-2 leading-relaxed">{preview}</p>
           )}
 
           {/* Full body (expanded, read mode) */}
           {expanded && !editing && (
-            <pre className="mt-2 text-xs font-mono text-foreground/80 whitespace-pre-wrap bg-muted/40 rounded p-3 overflow-x-auto max-h-96 overflow-y-auto">
+            <pre className="mt-2 text-xs font-mono text-foreground/80 whitespace-pre-wrap bg-muted/40 rounded-md p-3 overflow-x-auto max-h-96 overflow-y-auto">
               {entry.body}
             </pre>
           )}
@@ -153,57 +158,59 @@ function MemoryCard({ entry, onClick, expanded }: { entry: MemoryEntry; onClick:
           {expanded && editing && (
             <div className="mt-2 space-y-2" onClick={e => e.stopPropagation()}>
               <textarea
-                className="w-full min-h-64 bg-muted/40 border border-primary/40 rounded p-3 text-xs font-mono text-foreground resize-y outline-none focus:border-primary/70 transition-colors"
+                className="w-full min-h-64 bg-muted/40 border border-primary/40 rounded-md p-3 text-xs font-mono text-foreground resize-y outline-none focus:border-primary/70 transition-colors"
                 value={draft}
                 onChange={e => setDraft(e.target.value)}
                 spellCheck={false}
               />
               {saveError && (
-                <p className="text-[11px] font-mono text-[#f87171]">{saveError}</p>
+                <p className="text-[11px] text-[#f87171]">{saveError}</p>
               )}
               <div className="flex gap-2">
-                <button
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="px-3 py-1.5 text-xs font-mono rounded border border-[#34d399]/50 text-[#34d399] bg-[#34d399]/10 hover:bg-[#34d399]/20 disabled:opacity-50 transition-colors"
-                >
-                  {saving ? 'saving…' : 'save'}
-                </button>
-                <button
-                  onClick={handleCancel}
-                  disabled={saving}
-                  className="px-3 py-1.5 text-xs font-mono rounded border border-border text-muted-foreground hover:text-foreground hover:border-primary/30 disabled:opacity-50 transition-colors"
-                >
-                  cancel
-                </button>
+                <Button onClick={handleSave} disabled={saving} size="sm" className="h-8">
+                  {saving ? 'Saving…' : 'Save'}
+                </Button>
+                <Button onClick={handleCancel} disabled={saving} size="sm" variant="outline" className="h-8">
+                  Cancel
+                </Button>
               </div>
             </div>
           )}
 
           {/* Footer */}
           <div className="flex flex-wrap items-center gap-2 pt-0.5">
-            <span className="text-[10px] font-mono text-muted-foreground/60 bg-muted px-1.5 py-0.5 rounded">
+            <span className="text-[10px] text-muted-foreground/70 bg-muted px-1.5 py-0.5 rounded">
               {projectName}
             </span>
             <span className="text-[10px] font-mono text-muted-foreground/40">{shortPath}</span>
-            <span className="text-[10px] font-mono text-muted-foreground/50 ml-auto">
+            <span className="text-[10px] text-muted-foreground/50 ml-auto">
               {formatRelativeDate(entry.mtime)}
             </span>
           </div>
         </div>
       </div>
-    </div>
+    </Card>
   )
 }
 
 // ── Stat card ─────────────────────────────────────────────────────────────────
 
-function StatCard({ value, label, color }: { value: number; label: string; color: string }) {
+function StatCard({ value, label, color, icon }: { value: number; label: string; color: string; icon: React.ReactNode }) {
   return (
-    <div className="border border-border bg-card rounded-lg px-4 py-3 flex flex-col gap-1">
-      <span className="text-2xl font-mono font-bold" style={{ color }}>{value}</span>
-      <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">{label}</span>
-    </div>
+    <Card className="py-0">
+      <CardContent className="flex items-center gap-3 px-4 py-3.5">
+        <span
+          className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-muted/50 [&_svg]:size-4"
+          style={{ color }}
+        >
+          {icon}
+        </span>
+        <div className="min-w-0">
+          <div className="text-2xl font-bold tabular-nums leading-none" style={{ color }}>{value}</div>
+          <div className="mt-1 text-xs text-muted-foreground truncate">{label}</div>
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -260,10 +267,10 @@ export default function MemoryPage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <TopBar title="claude-code-lens · memory" subtitle="~/.claude/projects/*/memory/" />
-      <div className="p-4 md:p-6 space-y-5">
+      <TopBar title="Memory" subtitle="AI-written memory from ~/.claude/projects/*/memory/" />
+      <div className="t-stagger-group p-4 md:p-6 space-y-5">
 
-        {error && <p className="text-[#f87171] text-sm font-mono">Error loading memories.</p>}
+        {error && <p className="text-[#f87171] text-sm">Error loading memories.</p>}
 
         {isLoading && (
           <div className="space-y-3">
@@ -272,9 +279,11 @@ export default function MemoryPage() {
                 <div key={i} className="h-20 bg-muted rounded-lg animate-pulse" />
               ))}
             </div>
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="h-24 bg-muted rounded-lg animate-pulse" />
-            ))}
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="h-32 bg-muted rounded-xl animate-pulse" />
+              ))}
+            </div>
           </div>
         )}
 
@@ -282,68 +291,73 @@ export default function MemoryPage() {
           <>
             {/* Stat cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <StatCard value={memories.length}  label="total memories" color="#fbbf24" />
-              <StatCard value={projectCount}     label="projects"       color="var(--viz-sky)" />
-              <StatCard value={counts.feedback ?? 0} label="feedback"   color="#f87171" />
-              <StatCard value={staleCount}        label="stale (>30d)"  color="#94a3b8" />
+              <StatCard value={memories.length}      label="Total memories" color="#fbbf24"        icon={<Brain />} />
+              <StatCard value={projectCount}         label="Projects"       color="var(--viz-sky)" icon={<FolderGit2 />} />
+              <StatCard value={counts.feedback ?? 0} label="Feedback"       color="#f87171"        icon={<MessagesSquare />} />
+              <StatCard value={staleCount}           label="Stale (>30d)"   color="#94a3b8"        icon={<Clock3 />} />
             </div>
 
-            {/* Type filter tabs */}
-            <div className="flex flex-wrap gap-2">
-              {FILTER_TYPES.map(type => {
-                const m = type === 'all' ? null : TYPE_META[type as MemoryType]
-                const count = counts[type] ?? 0
-                const active = filter === type
-                return (
-                  <button
-                    key={type}
-                    onClick={() => setFilter(type)}
-                    className={[
-                      'flex items-center gap-1.5 px-3 py-1.5 rounded border text-xs font-mono transition-all',
-                      active
-                        ? 'border-primary/50 bg-primary/10 text-primary'
-                        : 'border-border bg-card text-muted-foreground hover:border-primary/30 hover:text-foreground',
-                    ].join(' ')}
-                  >
-                    {m && (
-                      <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: m.dot }} />
-                    )}
-                    {type}
-                    <span className="opacity-60">({count})</span>
-                  </button>
-                )
-              })}
-            </div>
+            {/* Toolbar: type filters + search — sticky below the top bar for quick access */}
+            <div className="sticky top-[57px] z-20 -mx-4 border-b border-border/60 bg-background/95 px-4 py-3 backdrop-blur md:-mx-6 md:px-6">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+                <div className="flex flex-wrap gap-2">
+                  {FILTER_TYPES.map(type => {
+                    const m = type === 'all' ? null : TYPE_META[type as MemoryType]
+                    const count = counts[type] ?? 0
+                    const active = filter === type
+                    return (
+                      <button
+                        key={type}
+                        onClick={() => setFilter(type)}
+                        aria-pressed={active}
+                        className={[
+                          'flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium capitalize transition-colors',
+                          active
+                            ? 'border-primary/50 bg-primary/10 text-primary'
+                            : 'border-border bg-card text-muted-foreground hover:border-primary/30 hover:text-foreground',
+                        ].join(' ')}
+                      >
+                        {m && (
+                          <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: m.dot }} />
+                        )}
+                        {type}
+                        <span className="tabular-nums opacity-60">{count}</span>
+                      </button>
+                    )
+                  })}
+                </div>
 
-            {/* Search */}
-            <div className="border border-border rounded-lg bg-card focus-within:border-primary/40 transition-colors">
-              <input
-                className="w-full bg-transparent px-4 py-2.5 text-sm font-mono text-foreground placeholder-muted-foreground/50 outline-none"
-                placeholder="search memories..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-              />
-            </div>
+                <div className="relative w-full lg:ml-auto lg:max-w-xs">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground/60" />
+                  <Input
+                    className="pl-9"
+                    placeholder="Search memories…"
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                  />
+                </div>
+              </div>
 
-            {/* Result count */}
-            {(search || filter !== 'all') && (
-              <p className="text-xs font-mono text-muted-foreground/60">
-                showing <span className="text-[#fbbf24]">{filtered.length}</span> of {memories.length} memories
-              </p>
-            )}
+              {/* Result count */}
+              {(search || filter !== 'all') && (
+                <p className="mt-2 text-xs text-muted-foreground/70">
+                  Showing <span className="font-medium text-foreground">{filtered.length}</span> of {memories.length} memories
+                </p>
+              )}
+            </div>
 
             {/* Memory list */}
             {filtered.length === 0 ? (
               <div className="text-center py-16">
                 <p className="text-3xl mb-3">🧠</p>
-                <p className="text-muted-foreground/60 text-sm font-mono">
+                <p className="text-muted-foreground/70 text-sm">
                   {memories.length === 0
                     ? 'No memory files found in ~/.claude/projects/*/memory/'
                     : 'No memories match your filter.'}
                 </p>
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
                 {filtered.map(entry => {
                   const id = `${entry.projectSlug}/${entry.file}`
                   return (
