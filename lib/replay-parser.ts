@@ -28,6 +28,10 @@ export async function parseSessionReplay(
   let version: string | undefined
   let gitBranch: string | undefined
   let totalCost = 0
+  // Claude Code splits one assistant message across multiple JSONL lines (one
+  // per content block), each repeating the same cumulative message.usage. Cost
+  // it once per message id so total_cost is not inflated by the block count.
+  const costedMessageIds = new Set<string>()
 
   // Build a map of turn_duration events keyed by parentUuid
   const turnDurations: Map<string, number> = new Map()
@@ -143,7 +147,13 @@ export async function parseSessionReplay(
         ? estimateCostFromUsage(model, usage)
         : 0
 
-      totalCost += estimated_cost
+      // Only add to the session total once per message id. Lines without an id
+      // (older transcripts) are always counted, preserving prior behavior.
+      const messageId = msg.id as string | undefined
+      if (!messageId || !costedMessageIds.has(messageId)) {
+        totalCost += estimated_cost
+        if (messageId) costedMessageIds.add(messageId)
+      }
 
       const turn_duration_ms = l.uuid ? turnDurations.get(l.uuid) : undefined
 
