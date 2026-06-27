@@ -15,6 +15,7 @@ This project follows a simple changelog format:
 
 ### Added
 
+- Plugin marketplaces are now surfaced on the Workspace page: each known marketplace from `known_marketplaces.json` shows its GitHub source, installed-plugin count, and last-updated date, and installed plugins link back to their marketplace source and show their pinned commit.
 - Professional dashboard redesign with a Linear-style theme, an expanded motion vocabulary, mount transitions across pages, and a personalized "wrapped" card.
 - `--demo` mode: launch the dashboard with a bundled sample dataset and animated stat counters, so it can be explored without any local `~/.claude/` history. Hosted deploys now serve this demo data instead of an empty dashboard.
 - Local usage headroom gauge for the 5h and 7d windows, with reset pings and cap warnings.

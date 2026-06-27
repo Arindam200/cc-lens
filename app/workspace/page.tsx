@@ -9,9 +9,9 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
   Sparkles, Puzzle, Bot, TerminalSquare, BookOpenText,
-  Paintbrush, Workflow, Webhook, AlertTriangle,
+  Paintbrush, Workflow, Webhook, AlertTriangle, Store, Github,
 } from 'lucide-react'
-import type { SkillInfo, PluginInfo, ConfigFileInfo } from '@/lib/claude-reader'
+import type { SkillInfo, PluginInfo, MarketplaceInfo, ConfigFileInfo } from '@/lib/claude-reader'
 
 const fetcher = (url: string) =>
   fetch(url).then(r => { if (!r.ok) throw new Error(`API error ${r.status}`); return r.json() })
@@ -19,6 +19,7 @@ const fetcher = (url: string) =>
 interface WorkspaceData {
   skills: SkillInfo[]
   plugins: PluginInfo[]
+  marketplaces: MarketplaceInfo[]
   agents: ConfigFileInfo[]
   commands: ConfigFileInfo[]
   rules: ConfigFileInfo[]
@@ -101,6 +102,11 @@ export default function WorkspacePage() {
     )
   }
 
+  // marketplace name -> github repo, so plugin rows can link back to their source
+  const marketplaceRepo = new Map(
+    data.marketplaces.filter(m => m.repo).map(m => [m.name, m.repo as string])
+  )
+
   return (
     <div className="flex flex-col min-h-screen">
       <TopBar
@@ -133,26 +139,96 @@ export default function WorkspacePage() {
               <p className="text-sm text-muted-foreground">No plugins installed. Browse marketplaces with /plugin in Claude Code.</p>
             ) : (
               <div className="grid gap-2 sm:grid-cols-2">
-                {data.plugins.map(plugin => (
-                  <div key={plugin.id + plugin.scope} className="border border-border rounded-lg p-3 flex items-center justify-between gap-4">
-                    <div className="min-w-0">
-                      <p className="text-primary font-mono text-sm font-bold truncate" title={plugin.id}>{plugin.name}</p>
-                      <p className="text-muted-foreground text-xs mt-0.5 truncate">
-                        {plugin.marketplace || 'unknown marketplace'} · {plugin.scope}
-                      </p>
+                {data.plugins.map(plugin => {
+                  const repo = marketplaceRepo.get(plugin.marketplace)
+                  return (
+                    <div key={plugin.id + plugin.scope} className="border border-border rounded-lg p-3 flex items-center justify-between gap-4">
+                      <div className="min-w-0">
+                        <p className="text-primary font-mono text-sm font-bold truncate" title={plugin.id}>{plugin.name}</p>
+                        <p className="text-muted-foreground text-xs mt-0.5 truncate">
+                          {repo ? (
+                            <a
+                              href={`https://github.com/${repo}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="hover:text-primary transition-colors"
+                            >
+                              {plugin.marketplace}
+                            </a>
+                          ) : (
+                            plugin.marketplace || 'unknown marketplace'
+                          )}
+                          {' · '}{plugin.scope}
+                          {plugin.gitCommitSha && (
+                            <span className="ml-1 font-mono text-muted-foreground/60">@{plugin.gitCommitSha.slice(0, 7)}</span>
+                          )}
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <Badge variant="outline" className="font-mono text-[11px]">v{plugin.version}</Badge>
+                        <p className="text-muted-foreground text-xs mt-1">
+                          {new Date(plugin.lastUpdated ?? plugin.installedAt).toLocaleDateString()}
+                        </p>
+                      </div>
                     </div>
-                    <div className="text-right shrink-0">
-                      <Badge variant="outline" className="font-mono text-[11px]">v{plugin.version}</Badge>
-                      <p className="text-muted-foreground text-xs mt-1">
-                        {new Date(plugin.lastUpdated ?? plugin.installedAt).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </CardContent>
         </Card>
+
+        {/* Marketplaces */}
+        {data.marketplaces.length > 0 && (
+          <Card>
+            <CardHeader>
+              <div className="flex items-start justify-between">
+                <div>
+                  <CardTitle>Plugin Marketplaces ({data.marketplaces.length})</CardTitle>
+                  <CardDescription>Sources Claude Code pulls plugins from — ~/.claude/plugins/known_marketplaces.json</CardDescription>
+                </div>
+                <Store className="w-4 h-4 text-muted-foreground mt-0.5" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {data.marketplaces.map(mp => {
+                  const installed = data.plugins.filter(p => p.marketplace === mp.name).length
+                  return (
+                    <div key={mp.name} className="border border-border rounded-lg p-3 flex items-start justify-between gap-4">
+                      <div className="min-w-0">
+                        <p className="text-primary font-mono text-sm font-bold truncate" title={mp.name}>{mp.name}</p>
+                        {mp.repo ? (
+                          <a
+                            href={`https://github.com/${mp.repo}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-muted-foreground text-xs mt-0.5 inline-flex items-center gap-1 hover:text-primary transition-colors"
+                          >
+                            <Github className="h-3 w-3 shrink-0" aria-hidden />
+                            <span className="truncate">{mp.repo}</span>
+                          </a>
+                        ) : (
+                          <p className="text-muted-foreground text-xs mt-0.5 truncate">{mp.sourceType ?? 'unknown source'}</p>
+                        )}
+                      </div>
+                      <div className="text-right shrink-0">
+                        <Badge variant="outline" className="font-mono text-[11px]">
+                          {installed} plugin{installed === 1 ? '' : 's'}
+                        </Badge>
+                        {mp.lastUpdated && (
+                          <p className="text-muted-foreground text-xs mt-1">
+                            {new Date(mp.lastUpdated).toLocaleDateString()}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Skills */}
         <Card>

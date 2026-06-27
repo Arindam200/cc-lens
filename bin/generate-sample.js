@@ -435,6 +435,27 @@ function generate(outDir, opts) {
   ]
   sampleTasks.forEach((t, i) => writeJSON(path.join(tasksDir, `task-${i + 1}.json`), { id: `task-${i + 1}`, ...t, activeForm: t.content }))
 
+  // plugins + marketplaces (workspace page)
+  const pluginsDir = path.join(outDir, 'plugins')
+  fs.mkdirSync(pluginsDir, { recursive: true })
+  writeJSON(path.join(pluginsDir, 'installed_plugins.json'), {
+    version: 2,
+    plugins: {
+      'pyright-lsp@claude-plugins-official': [
+        { scope: 'user', version: '1.0.0', installedAt: '2026-02-27T09:48:20.889Z', lastUpdated: '2026-02-27T09:48:20.889Z', gitCommitSha: '55b58ec6e5649104f926ba7558b567dc8d33c5ff' },
+      ],
+      'security-guidance@claude-plugins-official': [
+        { scope: 'user', version: '2.0.6', installedAt: '2026-05-27T04:13:04.604Z', lastUpdated: '2026-06-12T15:25:33.567Z' },
+      ],
+    },
+  })
+  writeJSON(path.join(pluginsDir, 'known_marketplaces.json'), {
+    'claude-plugins-official': {
+      source: { source: 'github', repo: 'anthropics/claude-plugins-official' },
+      lastUpdated: '2026-06-27T06:38:19.046Z',
+    },
+  })
+
   // project memory (workspace page)
   const memDir = path.join(outDir, 'projects', PROJECTS[0].slug, 'memory')
   fs.mkdirSync(memDir, { recursive: true })
