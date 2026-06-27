@@ -15,6 +15,7 @@ This project follows a simple changelog format:
 
 ### Added
 
+- New Files & Code Churn page (`/files`): ranks the files Claude Code edited most, with per-file edit/write counts and approximate lines added/removed, plus churn-over-time, by-language, and by-project rollups. Derived entirely from `Edit`/`Write`/`MultiEdit` calls in session JSONL — no new data source.
 - Plugin marketplaces are now surfaced on the Workspace page: each known marketplace from `known_marketplaces.json` shows its GitHub source, installed-plugin count, and last-updated date, and installed plugins link back to their marketplace source and show their pinned commit.
 - Professional dashboard redesign with a Linear-style theme, an expanded motion vocabulary, mount transitions across pages, and a personalized "wrapped" card.
 - `--demo` mode: launch the dashboard with a bundled sample dataset and animated stat counters, so it can be explored without any local `~/.claude/` history. Hosted deploys now serve this demo data instead of an empty dashboard.

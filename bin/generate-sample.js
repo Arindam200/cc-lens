@@ -188,10 +188,16 @@ function buildSession(rand, { project, dayStart, sessionId, slug, version, branc
       if (useMcp && k === 0 && rand() < 0.5) name = pick(rand, MCP_TOOLS)
       if (useWeb && k === 0 && rand() < 0.4) name = rand() < 0.5 ? 'WebSearch' : 'WebFetch'
       if (useSkill && i === 0 && k === 0) name = 'Skill'
+      const ext = project.langs[0] === 'Go' ? 'go' : 'ts'
+      const filePath = `${project.path}/src/${pick(rand, ['index', 'handler', 'routes', 'db', 'utils'])}.${ext}`
+      // Build a chunk of N source-like lines, so Edit/Write churn is non-zero.
+      const lines = (n) => Array.from({ length: n }, (_, j) => `  line${j} = compute(${j})`).join('\n')
       const input =
         name === 'Skill' ? { skill: pick(rand, SKILLS) } :
         name === 'Bash' ? { command: pick(rand, ['npm test', 'go build ./...', 'git status', 'npm run lint']) } :
-        name === 'Read' || name === 'Edit' || name === 'Write' ? { file_path: `${project.path}/src/${pick(rand, ['index', 'handler', 'routes', 'db', 'utils'])}.${project.langs[0] === 'Go' ? 'go' : 'ts'}` } :
+        name === 'Read' ? { file_path: filePath } :
+        name === 'Write' ? { file_path: filePath, content: lines(intBetween(rand, 12, 60)) } :
+        name === 'Edit' ? { file_path: filePath, old_string: lines(intBetween(rand, 1, 6)), new_string: lines(intBetween(rand, 2, 14)) } :
         name === 'Grep' || name === 'Glob' ? { pattern: pick(rand, ['TODO', 'function', 'export', 'import']) } :
         {}
       const tu = { type: 'tool_use', id: `toolu_${uuid(rand).slice(0, 12)}`, name, input }

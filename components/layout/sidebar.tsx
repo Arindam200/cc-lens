@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, FolderOpen, MessageSquare, DollarSign,
   Wrench, Activity, History, Blocks, FileText, Lightbulb, Gift,
-  Brain, Settings, Download, Users, ListTodo, Gauge, Moon, Sun, PanelLeftClose, PanelLeft,
+  Brain, Settings, Download, Users, ListTodo, Gauge, FileCode2, Moon, Sun, PanelLeftClose, PanelLeft,
 } from 'lucide-react'
 import { useTheme } from '@/components/theme-provider'
 import { useSidebar } from '@/components/layout/sidebar-context'
@@ -22,6 +22,7 @@ const NAV = [
   { href: '/usage',    label: 'Usage',     icon: Gauge           },
   { href: '/insights', label: 'Insights',  icon: Lightbulb       },
   { href: '/tools',    label: 'Tools',     icon: Wrench          },
+  { href: '/files',    label: 'Files',     icon: FileCode2       },
   { href: '/activity', label: 'Activity',  icon: Activity        },
   { href: '/history',  label: 'History',   icon: History         },
   { href: '/workspace', label: 'Workspace', icon: Blocks         },
