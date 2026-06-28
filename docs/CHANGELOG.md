@@ -11,13 +11,21 @@ This project follows a simple changelog format:
 
 ## Unreleased
 
+## 0.4.1 - 2026-06-27
+
 ### Added
 
+- New Files & Code Churn page (`/files`): ranks the files Claude Code edited most, with per-file edit/write counts and approximate lines added/removed, plus churn-over-time, by-language, and by-project rollups. Derived entirely from `Edit`/`Write`/`MultiEdit` calls in session JSONL — no new data source.
+- Plugin marketplaces are now surfaced on the Workspace page: each known marketplace from `known_marketplaces.json` shows its GitHub source, installed-plugin count, and last-updated date, and installed plugins link back to their marketplace source and show their pinned commit.
+- Professional dashboard redesign with a Linear-style theme, an expanded motion vocabulary, mount transitions across pages, and a personalized "wrapped" card.
+- `--demo` mode: launch the dashboard with a bundled sample dataset and animated stat counters, so it can be explored without any local `~/.claude/` history. Hosted deploys now serve this demo data instead of an empty dashboard.
+- Local usage headroom gauge for the 5h and 7d windows, with reset pings and cap warnings.
 - Skill (slash-command) usage is now tracked as a first-class dimension. The Tools page ranks invoked skills by call count and session reach, parsed from `Skill` tool calls in session JSONL.
 - CLI flags: `--host` and `--port` (with `CC_LENS_HOST` and `PORT` env equivalents), plus `--help` / `-h` and `--version` / `-v`.
 
 ### Changed
 
+- Redesigned session replay: tool calls are grouped and consecutive response turns are merged for a cleaner timeline.
 - The CLI binds to `127.0.0.1` by default and no longer reads the shell's `HOSTNAME` variable, which some shells, containers, and WSL export as the machine name. This fixes `http://localhost` failing to load and avoids binding wider than intended. Use `--host 0.0.0.0` to opt into LAN access.
 
 ### Fixed

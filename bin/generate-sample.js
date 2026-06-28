@@ -188,10 +188,16 @@ function buildSession(rand, { project, dayStart, sessionId, slug, version, branc
       if (useMcp && k === 0 && rand() < 0.5) name = pick(rand, MCP_TOOLS)
       if (useWeb && k === 0 && rand() < 0.4) name = rand() < 0.5 ? 'WebSearch' : 'WebFetch'
       if (useSkill && i === 0 && k === 0) name = 'Skill'
+      const ext = project.langs[0] === 'Go' ? 'go' : 'ts'
+      const filePath = `${project.path}/src/${pick(rand, ['index', 'handler', 'routes', 'db', 'utils'])}.${ext}`
+      // Build a chunk of N source-like lines, so Edit/Write churn is non-zero.
+      const lines = (n) => Array.from({ length: n }, (_, j) => `  line${j} = compute(${j})`).join('\n')
       const input =
         name === 'Skill' ? { skill: pick(rand, SKILLS) } :
         name === 'Bash' ? { command: pick(rand, ['npm test', 'go build ./...', 'git status', 'npm run lint']) } :
-        name === 'Read' || name === 'Edit' || name === 'Write' ? { file_path: `${project.path}/src/${pick(rand, ['index', 'handler', 'routes', 'db', 'utils'])}.${project.langs[0] === 'Go' ? 'go' : 'ts'}` } :
+        name === 'Read' ? { file_path: filePath } :
+        name === 'Write' ? { file_path: filePath, content: lines(intBetween(rand, 12, 60)) } :
+        name === 'Edit' ? { file_path: filePath, old_string: lines(intBetween(rand, 1, 6)), new_string: lines(intBetween(rand, 2, 14)) } :
         name === 'Grep' || name === 'Glob' ? { pattern: pick(rand, ['TODO', 'function', 'export', 'import']) } :
         {}
       const tu = { type: 'tool_use', id: `toolu_${uuid(rand).slice(0, 12)}`, name, input }
@@ -434,6 +440,27 @@ function generate(outDir, opts) {
     { content: 'Document the runbook', status: 'pending' },
   ]
   sampleTasks.forEach((t, i) => writeJSON(path.join(tasksDir, `task-${i + 1}.json`), { id: `task-${i + 1}`, ...t, activeForm: t.content }))
+
+  // plugins + marketplaces (workspace page)
+  const pluginsDir = path.join(outDir, 'plugins')
+  fs.mkdirSync(pluginsDir, { recursive: true })
+  writeJSON(path.join(pluginsDir, 'installed_plugins.json'), {
+    version: 2,
+    plugins: {
+      'pyright-lsp@claude-plugins-official': [
+        { scope: 'user', version: '1.0.0', installedAt: '2026-02-27T09:48:20.889Z', lastUpdated: '2026-02-27T09:48:20.889Z', gitCommitSha: '55b58ec6e5649104f926ba7558b567dc8d33c5ff' },
+      ],
+      'security-guidance@claude-plugins-official': [
+        { scope: 'user', version: '2.0.6', installedAt: '2026-05-27T04:13:04.604Z', lastUpdated: '2026-06-12T15:25:33.567Z' },
+      ],
+    },
+  })
+  writeJSON(path.join(pluginsDir, 'known_marketplaces.json'), {
+    'claude-plugins-official': {
+      source: { source: 'github', repo: 'anthropics/claude-plugins-official' },
+      lastUpdated: '2026-06-27T06:38:19.046Z',
+    },
+  })
 
   // project memory (workspace page)
   const memDir = path.join(outDir, 'projects', PROJECTS[0].slug, 'memory')

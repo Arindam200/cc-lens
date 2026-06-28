@@ -21,6 +21,7 @@ const PAGES = [
   { label: 'Sessions',  href: '/sessions'  },
   { label: 'Costs',     href: '/costs'     },
   { label: 'Tools',     href: '/tools'     },
+  { label: 'Files',     href: '/files'     },
   { label: 'Activity',  href: '/activity'  },
   { label: 'History',   href: '/history'   },
   { label: 'Workspace', href: '/workspace' },

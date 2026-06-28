@@ -673,12 +673,13 @@ export interface PluginInfo {
   version: string
   installedAt: string
   lastUpdated?: string
+  gitCommitSha?: string
 }
 
 export async function readInstalledPlugins(): Promise<PluginInfo[]> {
   try {
     const raw = await fs.readFile(claudePath('plugins', 'installed_plugins.json'), 'utf-8')
-    const json = JSON.parse(raw) as { plugins: Record<string, Array<{ scope: string; version: string; installedAt: string; lastUpdated?: string }>> }
+    const json = JSON.parse(raw) as { plugins: Record<string, Array<{ scope: string; version: string; installedAt: string; lastUpdated?: string; gitCommitSha?: string }>> }
     return Object.entries(json.plugins).flatMap(([id, installs]) => {
       const at = id.lastIndexOf('@')
       const name = at > 0 ? id.slice(0, at) : id
@@ -691,8 +692,42 @@ export async function readInstalledPlugins(): Promise<PluginInfo[]> {
         version: inst.version,
         installedAt: inst.installedAt,
         lastUpdated: inst.lastUpdated,
+        gitCommitSha: inst.gitCommitSha,
       }))
     })
+  } catch {
+    return []
+  }
+}
+
+export interface MarketplaceInfo {
+  /** Marketplace key, e.g. "claude-plugins-official" */
+  name: string
+  /** Source kind, e.g. "github" */
+  sourceType?: string
+  /** owner/repo when sourced from github */
+  repo?: string
+  lastUpdated?: string
+}
+
+/**
+ * List the plugin marketplaces Claude Code knows about, from
+ * ~/.claude/plugins/known_marketplaces.json. The on-disk install location is
+ * a server path and is intentionally not surfaced.
+ */
+export async function readMarketplaces(): Promise<MarketplaceInfo[]> {
+  try {
+    const raw = await fs.readFile(claudePath('plugins', 'known_marketplaces.json'), 'utf-8')
+    const json = JSON.parse(raw) as Record<string, {
+      source?: { source?: string; repo?: string }
+      lastUpdated?: string
+    }>
+    return Object.entries(json).map(([name, entry]) => ({
+      name,
+      sourceType: entry.source?.source,
+      repo: entry.source?.repo,
+      lastUpdated: entry.lastUpdated,
+    }))
   } catch {
     return []
   }

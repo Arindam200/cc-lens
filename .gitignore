@@ -46,4 +46,11 @@ next-env.d.ts
 BLOG.md
 DISTRIBUTION.md
 MARKETING.md
+REDDIT-POST.md
+X-POSTS.md
 .gstack/
+
+# agent / skill tooling (local only, not part of the package)
+.claude/
+.agents/
+skills-lock.json

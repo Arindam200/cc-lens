@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import {
   readSkills,
   readInstalledPlugins,
+  readMarketplaces,
   readConfigDir,
   readSettings,
 } from '@/lib/claude-reader'
@@ -9,10 +10,11 @@ import {
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
-  const [skills, plugins, agents, commands, rules, outputStyles, workflows, settings] =
+  const [skills, plugins, marketplaces, agents, commands, rules, outputStyles, workflows, settings] =
     await Promise.all([
       readSkills(),
       readInstalledPlugins(),
+      readMarketplaces(),
       readConfigDir('agents'),
       readConfigDir('commands'),
       readConfigDir('rules'),
@@ -45,6 +47,7 @@ export async function GET() {
   return NextResponse.json({
     skills,
     plugins,
+    marketplaces,
     agents,
     commands,
     rules,

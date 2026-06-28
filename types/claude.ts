@@ -431,6 +431,65 @@ export interface TeamDailyPoint {
   total_sessions: number
 }
 
+// ─── Files / code churn ──────────────────────────────────────────────────────
+
+export interface FileChurnRecord {
+  /** Path relative to its project root, e.g. "src/handler.ts" */
+  path: string
+  /** Decoded project path the file belongs to */
+  project: string
+  /** File extension without the dot, lowercased (e.g. "ts"); "" if none */
+  ext: string
+  /** Number of Edit/MultiEdit calls that touched this file */
+  edits: number
+  /** Number of Write calls (file created or overwritten) */
+  writes: number
+  /** Approximate lines added (newlines in new content) */
+  lines_added: number
+  /** Approximate lines removed (newlines in replaced content) */
+  lines_removed: number
+  /** edits + writes */
+  touches: number
+  /** lines_added + lines_removed */
+  churn: number
+  /** Distinct sessions that touched the file */
+  session_count: number
+  /** ISO timestamp of the most recent touch */
+  last_touched: string
+}
+
+export interface FileLangSummary {
+  ext: string
+  files: number
+  touches: number
+  churn: number
+}
+
+export interface FileProjectSummary {
+  project: string
+  files: number
+  touches: number
+  churn: number
+}
+
+export interface FileChurnDaily {
+  date: string
+  added: number
+  removed: number
+}
+
+export interface FilesAnalytics {
+  files: FileChurnRecord[]
+  by_language: FileLangSummary[]
+  by_project: FileProjectSummary[]
+  daily: FileChurnDaily[]
+  total_files: number
+  total_edits: number
+  total_writes: number
+  total_lines_added: number
+  total_lines_removed: number
+}
+
 export interface TeamAnalytics {
   source_dir: string
   member_count: number
