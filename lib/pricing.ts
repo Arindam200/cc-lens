@@ -130,11 +130,18 @@ function getPricing(model: string): ModelPricing {
 
 export function estimateCostFromUsage(model: string, usage: TurnUsage): number {
   const p = getPricing(model)
+  const cc = usage.cache_creation
+  // If the 5m/1h breakdown is present, price separately. Otherwise treat the
+  // flat total as 5-minute writes (ccusage's fallback for older entries).
+  const cache5m = cc !== undefined
+    ? (cc.ephemeral_5m_input_tokens ?? 0)
+    : (usage.cache_creation_input_tokens ?? 0)
+  const cache1h = cc?.ephemeral_1h_input_tokens ?? 0
   return (
-    (usage.input_tokens                ?? 0) * p.input      +
-    (usage.output_tokens               ?? 0) * p.output     +
-    (usage.cache_creation_input_tokens ?? 0) * p.cacheWrite +
-    (usage.cache_read_input_tokens     ?? 0) * p.cacheRead
+    (usage.input_tokens            ?? 0) * p.input  +
+    (usage.output_tokens           ?? 0) * p.output +
+    cache5m * p.cacheWrite + cache1h * p.input * 2.0 +
+    (usage.cache_read_input_tokens ?? 0) * p.cacheRead
   )
 }
 
@@ -168,11 +175,17 @@ export function cacheEfficiency(
 
 export function estimateTotalCostFromModel(model: string, usage: ModelUsage): number {
   const p = getPricing(model)
+  // If the 5m/1h split is available, price separately. Otherwise treat the flat
+  // total as 5-minute writes (ccusage's fallback for older/aggregated entries).
+  const hasSplit = usage.cacheCreation5m !== undefined || usage.cacheCreation1h !== undefined
+  const cacheWriteCost = hasSplit
+    ? (usage.cacheCreation5m ?? 0) * p.cacheWrite + (usage.cacheCreation1h ?? 0) * p.input * 2.0
+    : (usage.cacheCreationInputTokens ?? 0) * p.cacheWrite
   return (
-    (usage.inputTokens                ?? 0) * p.input      +
-    (usage.outputTokens               ?? 0) * p.output     +
-    (usage.cacheCreationInputTokens   ?? 0) * p.cacheWrite +
-    (usage.cacheReadInputTokens       ?? 0) * p.cacheRead
+    (usage.inputTokens          ?? 0) * p.input  +
+    (usage.outputTokens         ?? 0) * p.output +
+    cacheWriteCost                               +
+    (usage.cacheReadInputTokens ?? 0) * p.cacheRead
   )
 }
 

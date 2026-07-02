@@ -136,6 +136,9 @@ async function parseSessionFile(filePath: string, sessionId: string): Promise<Pa
   let hasCompaction = false
   let hasThinking = false
   const modelUsage: Record<string, ModelUsage> = {}
+  // Dedup key: (message.id, requestId) — Claude Code re-logs each streaming
+  // iteration of the same assistant message, so the same pair appears N times.
+  const seenUsage = new Set<string>()
 
   try {
     // Stream line-by-line rather than buffering the whole file — session
@@ -184,34 +187,56 @@ async function parseSessionFile(filePath: string, sessionId: string): Promise<Pa
         }
         if (obj.type === 'assistant') {
           assistantCount++
-          const msg = (obj as { message?: { model?: string; usage?: Record<string, number>; content?: unknown[] } }).message
-          if (msg?.usage) {
-            const turnInput = msg.usage.input_tokens ?? 0
-            const turnOutput = msg.usage.output_tokens ?? 0
-            const turnCacheRead = msg.usage.cache_read_input_tokens ?? 0
-            const turnCacheWrite = msg.usage.cache_creation_input_tokens ?? 0
+          const msg = (obj as { message?: { id?: string; model?: string; usage?: Record<string, unknown>; content?: unknown[] } }).message
+          // Deduplicate: skip token summation for re-logged streaming iterations.
+          // Guard is on message.id — if absent, count unconditionally (ccusage
+          // behaviour for id-less entries).
+          const msgId = msg?.id
+          const reqId = (obj as { requestId?: string }).requestId
+          let countUsage = true
+          if (msgId) {
+            const key = `${msgId}::${reqId ?? ''}`
+            if (seenUsage.has(key)) {
+              countUsage = false
+            } else {
+              seenUsage.add(key)
+            }
+          }
+          if (countUsage && msg?.usage && msg.model && msg.model !== '<synthetic>') {
+            const u = msg.usage
+            const turnInput = (u.input_tokens as number) ?? 0
+            const turnOutput = (u.output_tokens as number) ?? 0
+            const turnCacheRead = (u.cache_read_input_tokens as number) ?? 0
+            const turnCacheWrite = (u.cache_creation_input_tokens as number) ?? 0
+            // Determine 5m vs 1h split. When the breakdown is absent, treat the
+            // flat total as 5m (ccusage fallback).
+            const cc = u.cache_creation as Record<string, number> | undefined
+            const turn5m = cc !== undefined ? (cc.ephemeral_5m_input_tokens ?? 0) : turnCacheWrite
+            const turn1h = cc !== undefined ? (cc.ephemeral_1h_input_tokens ?? 0) : 0
             inputTokens += turnInput
             outputTokens += turnOutput
             cacheRead += turnCacheRead
             cacheWrite += turnCacheWrite
 
-            if (msg.model) {
-              const existing = modelUsage[msg.model] ?? {
-                inputTokens: 0,
-                outputTokens: 0,
-                cacheReadInputTokens: 0,
-                cacheCreationInputTokens: 0,
-                costUSD: 0,
-                webSearchRequests: 0,
-              }
-              existing.inputTokens += turnInput
-              existing.outputTokens += turnOutput
-              existing.cacheReadInputTokens += turnCacheRead
-              existing.cacheCreationInputTokens += turnCacheWrite
-              modelUsage[msg.model] = existing
+            const existing = modelUsage[msg.model] ?? {
+              inputTokens: 0,
+              outputTokens: 0,
+              cacheReadInputTokens: 0,
+              cacheCreationInputTokens: 0,
+              cacheCreation5m: 0,
+              cacheCreation1h: 0,
+              costUSD: 0,
+              webSearchRequests: 0,
             }
+            existing.inputTokens += turnInput
+            existing.outputTokens += turnOutput
+            existing.cacheReadInputTokens += turnCacheRead
+            existing.cacheCreationInputTokens += turnCacheWrite
+            existing.cacheCreation5m = (existing.cacheCreation5m ?? 0) + turn5m
+            existing.cacheCreation1h = (existing.cacheCreation1h ?? 0) + turn1h
+            modelUsage[msg.model] = existing
           }
-          const content = msg?.content
+          const content = (msg as { content?: unknown[] } | undefined)?.content
           if (Array.isArray(content)) {
             for (const c of content) {
               const item = c as { type?: string; name?: string; input?: Record<string, unknown> }
@@ -436,15 +461,29 @@ export async function listProjectSlugs(): Promise<string[]> {
 }
 
 export async function listProjectJSONLFiles(slug: string): Promise<string[]> {
+  const results: string[] = []
+  async function walk(dir: string): Promise<void> {
+    let entries: import('fs').Dirent[]
+    try {
+      entries = await fs.readdir(dir, { withFileTypes: true })
+    } catch {
+      return
+    }
+    for (const e of entries) {
+      const full = path.join(dir, e.name)
+      if (e.isDirectory()) {
+        await walk(full)
+      } else if (e.name.endsWith('.jsonl')) {
+        results.push(full)
+      }
+    }
+  }
   try {
-    const dir = claudePath('projects', slug)
-    const files = await fs.readdir(dir)
-    return files
-      .filter(f => f.endsWith('.jsonl'))
-      .map(f => path.join(dir, f))
+    await walk(claudePath('projects', slug))
   } catch {
     return []
   }
+  return results
 }
 
 /** Stream a JSONL file line by line, calling cb for each parsed line */
@@ -861,26 +900,37 @@ const fileTurnsCache = new Map<string, { mtimeMs: number; turns: UsageTurn[] }>(
 
 function extractTurns(filePath: string, sinceMs: number): Promise<UsageTurn[]> {
   const turns: UsageTurn[] = []
+  const seenUsage = new Set<string>()
   return readJSONLLines(filePath, (obj) => {
     if (obj.type !== 'assistant') return
     const ts = typeof obj.timestamp === 'string' ? Date.parse(obj.timestamp) : NaN
     if (isNaN(ts) || ts < sinceMs) return
-    const msg = (obj as { message?: { model?: string; usage?: Record<string, number> } }).message
+    const msg = (obj as { message?: { id?: string; model?: string; usage?: Record<string, unknown> } }).message
     if (!msg?.usage || !msg.model) return
-    const usage = msg.usage
+    // Dedup by (message.id, requestId)
+    const msgId = msg.id
+    const reqId = (obj as { requestId?: string }).requestId
+    if (msgId) {
+      const key = `${msgId}::${reqId ?? ''}`
+      if (seenUsage.has(key)) return
+      seenUsage.add(key)
+    }
+    const u = msg.usage
+    const turnUsage: import('@/types/claude').TurnUsage = {
+      input_tokens: (u.input_tokens as number) ?? 0,
+      output_tokens: (u.output_tokens as number) ?? 0,
+      cache_creation_input_tokens: (u.cache_creation_input_tokens as number) ?? 0,
+      cache_read_input_tokens: (u.cache_read_input_tokens as number) ?? 0,
+      cache_creation: u.cache_creation as import('@/types/claude').TurnUsage['cache_creation'],
+    }
     turns.push({
       ts,
       model: msg.model,
-      costUSD: estimateCostFromUsage(msg.model, {
-        input_tokens: usage.input_tokens ?? 0,
-        output_tokens: usage.output_tokens ?? 0,
-        cache_creation_input_tokens: usage.cache_creation_input_tokens ?? 0,
-        cache_read_input_tokens: usage.cache_read_input_tokens ?? 0,
-      }),
-      inputTokens: usage.input_tokens ?? 0,
-      outputTokens: usage.output_tokens ?? 0,
-      cacheReadTokens: usage.cache_read_input_tokens ?? 0,
-      cacheWriteTokens: usage.cache_creation_input_tokens ?? 0,
+      costUSD: estimateCostFromUsage(msg.model, turnUsage),
+      inputTokens: turnUsage.input_tokens,
+      outputTokens: turnUsage.output_tokens,
+      cacheReadTokens: turnUsage.cache_read_input_tokens,
+      cacheWriteTokens: turnUsage.cache_creation_input_tokens,
     })
   }).then(() => turns)
 }

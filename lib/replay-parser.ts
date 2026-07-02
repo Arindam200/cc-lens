@@ -28,6 +28,8 @@ export async function parseSessionReplay(
   let version: string | undefined
   let gitBranch: string | undefined
   let totalCost = 0
+  // Dedup: Claude Code re-logs each streaming iteration of the same message.
+  const seenUsage = new Set<string>()
 
   // Build a map of turn_duration events keyed by parentUuid
   const turnDurations: Map<string, number> = new Map()
@@ -113,6 +115,15 @@ export async function parseSessionReplay(
     // ─── Assistant turn
     if (l.type === 'assistant') {
       const msg = l.message ?? {}
+      // Dedup by (message.id, requestId) — skip cost/token summation for
+      // re-logged streaming iterations; still render the turn in the UI.
+      const msgId = msg.id as string | undefined
+      const reqId = l.requestId as string | undefined
+      if (msgId) {
+        const key = `${msgId}::${reqId ?? ''}`
+        if (seenUsage.has(key)) continue
+        seenUsage.add(key)
+      }
       const usage = msg.usage as TurnUsage | undefined
       const model = msg.model as string | undefined
       const content = msg.content ?? []

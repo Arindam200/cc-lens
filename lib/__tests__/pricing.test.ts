@@ -66,7 +66,38 @@ describe('estimateCostFromUsage', () => {
   })
 
   it('treats missing fields as zero', () => {
-    expect(estimateCostFromUsage('claude-opus-4-8', {})).toBe(0)
+    expect(estimateCostFromUsage('claude-opus-4-8', {} as import('@/types/claude').TurnUsage)).toBe(0)
+  })
+
+  it('prices 1h cache writes at input × 2, not cacheWrite', () => {
+    // claude-opus-4-8: input=$5/MTok, cacheWrite=$6.25/MTok
+    // 1h rate should be $10/MTok (input × 2), not $6.25
+    const cost = estimateCostFromUsage('claude-opus-4-8', {
+      input_tokens: 0,
+      output_tokens: 0,
+      cache_creation_input_tokens: MTOK,
+      cache_read_input_tokens: 0,
+      cache_creation: {
+        ephemeral_5m_input_tokens: 0,
+        ephemeral_1h_input_tokens: MTOK,
+      },
+    })
+    expect(cost).toBeCloseTo(10)  // $5 × 2 = $10, not $6.25
+  })
+
+  it('prices mixed 5m and 1h cache writes correctly', () => {
+    const cost = estimateCostFromUsage('claude-opus-4-8', {
+      input_tokens: 0,
+      output_tokens: 0,
+      cache_creation_input_tokens: 2 * MTOK,
+      cache_read_input_tokens: 0,
+      cache_creation: {
+        ephemeral_5m_input_tokens: MTOK,
+        ephemeral_1h_input_tokens: MTOK,
+      },
+    })
+    // 5m: $6.25, 1h: $10
+    expect(cost).toBeCloseTo(16.25)
   })
 })
 
@@ -81,6 +112,34 @@ describe('estimateTotalCostFromModel', () => {
       webSearchRequests: 0,
     })
     expect(cost).toBeCloseTo(18) // 3 + 15
+  })
+
+  it('prices 1h cache writes at input × 2 when split is present', () => {
+    // claude-opus-4-8: input=$5/MTok → 1h rate = $10/MTok
+    const cost = estimateTotalCostFromModel('claude-opus-4-8', {
+      inputTokens: 0,
+      outputTokens: 0,
+      cacheCreationInputTokens: MTOK,
+      cacheReadInputTokens: 0,
+      cacheCreation5m: 0,
+      cacheCreation1h: MTOK,
+      costUSD: 0,
+      webSearchRequests: 0,
+    })
+    expect(cost).toBeCloseTo(10)
+  })
+
+  it('falls back to flat cacheWrite rate when split is absent', () => {
+    // No cacheCreation5m/1h fields → flat total treated as 5m ($6.25/MTok)
+    const cost = estimateTotalCostFromModel('claude-opus-4-8', {
+      inputTokens: 0,
+      outputTokens: 0,
+      cacheCreationInputTokens: MTOK,
+      cacheReadInputTokens: 0,
+      costUSD: 0,
+      webSearchRequests: 0,
+    })
+    expect(cost).toBeCloseTo(6.25)
   })
 })
 

@@ -16,7 +16,9 @@ export interface ModelUsage {
   inputTokens: number
   outputTokens: number
   cacheReadInputTokens: number
-  cacheCreationInputTokens: number
+  cacheCreationInputTokens: number  // sum of 5m + 1h writes; kept for back-compat/display
+  cacheCreation5m?: number           // ephemeral_5m writes, priced at cacheWrite rate
+  cacheCreation1h?: number           // ephemeral_1h writes, priced at input × 2
   costUSD: number
   webSearchRequests: number
 }

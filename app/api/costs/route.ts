@@ -40,6 +40,14 @@ function addUsage(target: ModelUsage, usage: ModelUsage) {
   target.cacheCreationInputTokens += usage.cacheCreationInputTokens ?? 0
   target.costUSD += usage.costUSD ?? 0
   target.webSearchRequests += usage.webSearchRequests ?? 0
+  // Propagate 5m/1h split when the source has it, so estimateTotalCostFromModel
+  // can use the correct per-tier pricing for the aggregated total.
+  if (usage.cacheCreation5m != null) {
+    target.cacheCreation5m = (target.cacheCreation5m ?? 0) + usage.cacheCreation5m
+  }
+  if (usage.cacheCreation1h != null) {
+    target.cacheCreation1h = (target.cacheCreation1h ?? 0) + usage.cacheCreation1h
+  }
 }
 
 function sessionModelUsage(session: SessionMeta): Record<string, ModelUsage> {
