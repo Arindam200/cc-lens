@@ -5,6 +5,7 @@ import type { ReplayData, SessionMeta } from '@/types/claude'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { GitBranch, Clock, FileCode2, Zap, Cpu } from 'lucide-react'
+import { SessionActions } from '@/components/sessions/replay/session-actions'
 
 interface Props {
   replay: ReplayData
@@ -61,6 +62,9 @@ export function SessionSidebar({ replay, meta }: Props) {
 
   return (
     <div className="text-sm">
+      <SessionActions replay={replay} />
+      <Separator className="my-5" />
+
       {/* Token breakdown */}
       <section>
         <SectionTitle>
