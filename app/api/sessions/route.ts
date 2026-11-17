@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server'
-import { getAllParsedSessions } from '@/lib/claude-reader'
+import { getSessionSnapshot } from '@/lib/claude-reader'
 import { sessionCost } from '@/lib/insights'
 import type { SessionWithFacet } from '@/types/claude'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
-  const parsed = await getAllParsedSessions()
+  const parsed = await getSessionSnapshot()
 
   const result: SessionWithFacet[] = parsed.map((p) => ({
     ...p,

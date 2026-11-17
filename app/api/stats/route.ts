@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { readStatsCache, getSessions, getClaudeStorageBytes } from '@/lib/claude-reader'
+import { readStatsCache, getSessions, getClaudeStorageBytesFast } from '@/lib/claude-reader'
 import { estimateTotalCostFromModel, getPricing, unpricedModels } from '@/lib/pricing'
 import type { DailyActivity, ModelUsage, SessionMeta } from '@/types/claude'
 
@@ -87,7 +87,7 @@ export async function GET() {
   const [stats, sessions, storageBytes] = await Promise.all([
     readStatsCache(),
     getSessions(),
-    getClaudeStorageBytes(),
+    getClaudeStorageBytesFast(),
   ])
 
   const dailyFromSessions = computeDailyActivityFromSessions(sessions)
