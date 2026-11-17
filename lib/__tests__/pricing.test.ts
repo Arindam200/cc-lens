@@ -66,7 +66,7 @@ describe('estimateCostFromUsage', () => {
   })
 
   it('treats missing fields as zero', () => {
-    expect(estimateCostFromUsage('claude-opus-4-8', {})).toBe(0)
+    expect(estimateCostFromUsage('claude-opus-4-8', {} as never)).toBe(0)
   })
 })
 

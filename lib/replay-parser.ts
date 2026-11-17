@@ -6,7 +6,7 @@ import type {
   TurnUsage,
   ToolCall,
 } from '@/types/claude'
-import { estimateCostFromUsage } from '@/lib/pricing'
+import { estimateCostFromUsage, pricingBucket } from '@/lib/pricing'
 import { readJSONLLines } from '@/lib/claude-reader'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -140,7 +140,7 @@ export async function parseSessionReplay(
       }
 
       const estimated_cost = model && usage
-        ? estimateCostFromUsage(model, usage)
+        ? estimateCostFromUsage(pricingBucket(model, (usage.input_tokens ?? 0) + (usage.cache_read_input_tokens ?? 0) + (usage.cache_creation_input_tokens ?? 0)), usage)
         : 0
 
       totalCost += estimated_cost
