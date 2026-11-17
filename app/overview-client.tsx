@@ -44,6 +44,7 @@ interface ApiResponse {
     sessionsThisWeek: number
     storageBytes: number
     sessionCount: number
+    unpricedModels?: string[]
   }
 }
 
@@ -366,6 +367,12 @@ export function OverviewClient() {
           <p className="text-sm text-muted-foreground mt-0.5">
             {projectCount} projects · {formatBytes(computed.storageBytes)} stored
           </p>
+          {computed.unpricedModels && computed.unpricedModels.length > 0 && (
+            <p className="text-xs text-amber-500 mt-1">
+              No price on file for {computed.unpricedModels.join(', ')}; their cost uses a fallback rate and is approximate.
+              Add a rate in ~/.cc-lens/pricing.json.
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <Tabs

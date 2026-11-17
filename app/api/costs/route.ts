@@ -38,6 +38,7 @@ function addUsage(target: ModelUsage, usage: ModelUsage) {
   target.outputTokens += usage.outputTokens ?? 0
   target.cacheReadInputTokens += usage.cacheReadInputTokens ?? 0
   target.cacheCreationInputTokens += usage.cacheCreationInputTokens ?? 0
+  target.cacheCreation1hInputTokens = (target.cacheCreation1hInputTokens ?? 0) + (usage.cacheCreation1hInputTokens ?? 0)
   target.costUSD += usage.costUSD ?? 0
   target.webSearchRequests += usage.webSearchRequests ?? 0
 }

@@ -11,7 +11,7 @@ import type {
   LiveSession,
 } from '@/types/claude'
 import { slugToPath } from '@/lib/decode'
-import { estimateCostFromUsage } from '@/lib/pricing'
+import { pricingBucket, estimateCostFromUsage } from '@/lib/pricing'
 
 function stripXmlTags(text: string): string {
   return text
@@ -184,7 +184,7 @@ async function parseSessionFile(filePath: string, sessionId: string): Promise<Pa
         }
         if (obj.type === 'assistant') {
           assistantCount++
-          const msg = (obj as { message?: { model?: string; usage?: Record<string, number>; content?: unknown[] } }).message
+          const msg = (obj as { message?: { model?: string; usage?: Record<string, number> & { cache_creation?: { ephemeral_1h_input_tokens?: number } }; content?: unknown[] } }).message
           if (msg?.usage) {
             const turnInput = msg.usage.input_tokens ?? 0
             const turnOutput = msg.usage.output_tokens ?? 0
@@ -196,7 +196,9 @@ async function parseSessionFile(filePath: string, sessionId: string): Promise<Pa
             cacheWrite += turnCacheWrite
 
             if (msg.model) {
-              const existing = modelUsage[msg.model] ?? {
+              // Long-prompt Haiku turns land in their own `@long` bucket (higher rate)
+              const bucket = pricingBucket(msg.model, turnInput + turnCacheRead + turnCacheWrite)
+              const existing = modelUsage[bucket] ?? {
                 inputTokens: 0,
                 outputTokens: 0,
                 cacheReadInputTokens: 0,
@@ -208,7 +210,9 @@ async function parseSessionFile(filePath: string, sessionId: string): Promise<Pa
               existing.outputTokens += turnOutput
               existing.cacheReadInputTokens += turnCacheRead
               existing.cacheCreationInputTokens += turnCacheWrite
-              modelUsage[msg.model] = existing
+              existing.cacheCreation1hInputTokens =
+                (existing.cacheCreation1hInputTokens ?? 0) + (msg.usage.cache_creation?.ephemeral_1h_input_tokens ?? 0)
+              modelUsage[bucket] = existing
             }
           }
           const content = msg?.content
@@ -865,17 +869,18 @@ function extractTurns(filePath: string, sinceMs: number): Promise<UsageTurn[]> {
     if (obj.type !== 'assistant') return
     const ts = typeof obj.timestamp === 'string' ? Date.parse(obj.timestamp) : NaN
     if (isNaN(ts) || ts < sinceMs) return
-    const msg = (obj as { message?: { model?: string; usage?: Record<string, number> } }).message
+    const msg = (obj as { message?: { model?: string; usage?: Record<string, number> & { cache_creation?: { ephemeral_5m_input_tokens: number; ephemeral_1h_input_tokens: number } } } }).message
     if (!msg?.usage || !msg.model) return
     const usage = msg.usage
     turns.push({
       ts,
       model: msg.model,
-      costUSD: estimateCostFromUsage(msg.model, {
+      costUSD: estimateCostFromUsage(pricingBucket(msg.model, (usage.input_tokens ?? 0) + (usage.cache_read_input_tokens ?? 0) + (usage.cache_creation_input_tokens ?? 0)), {
         input_tokens: usage.input_tokens ?? 0,
         output_tokens: usage.output_tokens ?? 0,
         cache_creation_input_tokens: usage.cache_creation_input_tokens ?? 0,
         cache_read_input_tokens: usage.cache_read_input_tokens ?? 0,
+        cache_creation: usage.cache_creation,
       }),
       inputTokens: usage.input_tokens ?? 0,
       outputTokens: usage.output_tokens ?? 0,

@@ -4,15 +4,36 @@ interface ModelPricing {
   input: number
   output: number
   cacheWrite: number
+  /** 1-hour cache write rate; defaults to 2x input (Anthropic's published multiplier). */
+  cacheWrite1h?: number
   cacheRead: number
+}
+
+// Models whose price changes with prompt size. Usage is bucketed per turn under
+// `<model>@long` once the prompt passes the threshold (tokens).
+const LONG_PROMPT_THRESHOLD: Record<string, number> = { 'claude-haiku-5-5': 100_000 }
+
+/** Pricing bucket for one turn: `<model>@long` when the prompt exceeds the model's long-prompt threshold. */
+export function pricingBucket(model: string, promptTokens: number): string {
+  for (const [key, limit] of Object.entries(LONG_PROMPT_THRESHOLD)) {
+    if (matchesPricingKey(model, key) && promptTokens > limit) return `${key}@long`
+  }
+  return model
 }
 
 // Vendored defaults — values are $ per million tokens. cacheWrite uses the
 // 5-minute ephemeral rate (the common case); users can override via
-// ~/.cc-lens/pricing.json. Source: claude.com/pricing as of 2026-06.
+// ~/.cc-lens/pricing.json. Source: platform.claude.com/docs/en/about-claude/pricing, checked 2026-11-17.
 const DEFAULT_PRICING_PER_MTOK: Record<string, ModelPricing> = {
+  // Fable 5.2 — $8 / $40 (longer keys must exist so they beat the claude-fable-5 prefix)
+  'claude-fable-5-2':  { input: 8.00, output: 40.00, cacheWrite: 10.00, cacheRead: 0.20 },
+  // Fable 5.1 — $10 / $50, cache read $0.25
+  'claude-fable-5-1':  { input: 10.00, output: 50.00, cacheWrite: 12.50, cacheRead: 0.25 },
   // Fable 5 — $10 / $50
   'claude-fable-5':    { input: 10.00, output: 50.00, cacheWrite: 12.50, cacheRead: 1.00 },
+  // Opus 5.x current generation
+  'claude-opus-5-5':   { input: 4.00, output: 20.00, cacheWrite: 5.00,  cacheRead: 0.20 },
+  'claude-opus-5':     { input: 5.00, output: 25.00, cacheWrite: 6.25,  cacheRead: 0.50 },
   // Opus 4.x current generation — $5 / $25
   'claude-opus-4-8':   { input: 5.00, output: 25.00, cacheWrite: 6.25,  cacheRead: 0.50 },
   'claude-opus-4-7':   { input: 5.00, output: 25.00, cacheWrite: 6.25,  cacheRead: 0.50 },
@@ -21,10 +42,16 @@ const DEFAULT_PRICING_PER_MTOK: Record<string, ModelPricing> = {
   // Opus 4.1 / 4.0 — legacy $15 / $75
   'claude-opus-4-1':   { input: 15.00, output: 75.00, cacheWrite: 18.75, cacheRead: 1.50 },
   'claude-opus-4':     { input: 15.00, output: 75.00, cacheWrite: 18.75, cacheRead: 1.50 },
+  // Sonnet 5.x — $2 / $10
+  'claude-sonnet-5-5': { input: 2.00, output: 10.00, cacheWrite: 2.50,  cacheRead: 0.10 },
+  'claude-sonnet-5':   { input: 2.00, output: 10.00, cacheWrite: 2.50,  cacheRead: 0.20 },
   // Sonnet 4.x — $3 / $15
   'claude-sonnet-4-6': { input: 3.00, output: 15.00, cacheWrite: 3.75,  cacheRead: 0.30 },
   'claude-sonnet-4-5': { input: 3.00, output: 15.00, cacheWrite: 3.75,  cacheRead: 0.30 },
   'claude-sonnet-4':   { input: 3.00, output: 15.00, cacheWrite: 3.75,  cacheRead: 0.30 },
+  // Haiku 5.5 — prompts up to 100k tokens; over 100k is the `@long` row
+  'claude-haiku-5-5':       { input: 0.10, output: 0.50, cacheWrite: 0.125, cacheRead: 0.01 },
+  'claude-haiku-5-5@long':  { input: 0.50, output: 2.50, cacheWrite: 0.625, cacheRead: 0.05 },
   // Haiku 4.5 — $1 / $5
   'claude-haiku-4-5':  { input: 1.00, output:  5.00, cacheWrite: 1.25,  cacheRead: 0.10 },
   // Haiku 3.5 — retired, $0.80 / $4
@@ -36,6 +63,7 @@ function toPerToken(p: ModelPricing): ModelPricing {
     input:      p.input      / 1_000_000,
     output:     p.output     / 1_000_000,
     cacheWrite: p.cacheWrite / 1_000_000,
+    cacheWrite1h: (p.cacheWrite1h ?? p.input * 2) / 1_000_000,
     cacheRead:  p.cacheRead  / 1_000_000,
   }
 }
@@ -114,6 +142,11 @@ export function hasKnownPricing(model: string): boolean {
   return Object.keys(table).some(key => matchesPricingKey(model, key))
 }
 
+/** Models in `models` with no pricing entry (their cost uses a fallback rate). */
+export function unpricedModels(models: Iterable<string>): string[] {
+  return [...new Set(models)].filter(m => m !== '<synthetic>' && !hasKnownPricing(m)).sort()
+}
+
 function getPricing(model: string): ModelPricing {
   const table = getPricingTable()
   if (table[model]) return table[model]
@@ -124,16 +157,22 @@ function getPricing(model: string): ModelPricing {
   for (const key of keys) {
     if (matchesPricingKey(model, key)) return table[key]
   }
+  // Smart fallback by model family instead of blind Opus fallback:
+  if (model.includes('haiku')) return table['claude-haiku-4-5']
+  if (model.includes('fable')) return table['claude-fable-5-1'] // highest known Fable rate: never under-estimate an unknown Fable
+  if (model.includes('sonnet')) return table['claude-sonnet-5-5'] ?? table['claude-sonnet-4-6']
   // Unknown model — assume current Opus rates rather than legacy ones
   return table['claude-opus-4-8']
 }
 
 export function estimateCostFromUsage(model: string, usage: TurnUsage): number {
   const p = getPricing(model)
+  const write = usage.cache_creation_input_tokens ?? 0
+  const write1h = Math.min(write, usage.cache_creation?.ephemeral_1h_input_tokens ?? 0)
   return (
     (usage.input_tokens                ?? 0) * p.input      +
     (usage.output_tokens               ?? 0) * p.output     +
-    (usage.cache_creation_input_tokens ?? 0) * p.cacheWrite +
+    (write - write1h) * p.cacheWrite + write1h * (p.cacheWrite1h ?? p.cacheWrite) +
     (usage.cache_read_input_tokens     ?? 0) * p.cacheRead
   )
 }
@@ -168,10 +207,12 @@ export function cacheEfficiency(
 
 export function estimateTotalCostFromModel(model: string, usage: ModelUsage): number {
   const p = getPricing(model)
+  const write = usage.cacheCreationInputTokens ?? 0
+  const write1h = Math.min(write, usage.cacheCreation1hInputTokens ?? 0)
   return (
     (usage.inputTokens                ?? 0) * p.input      +
     (usage.outputTokens               ?? 0) * p.output     +
-    (usage.cacheCreationInputTokens   ?? 0) * p.cacheWrite +
+    (write - write1h) * p.cacheWrite + write1h * (p.cacheWrite1h ?? p.cacheWrite) +
     (usage.cacheReadInputTokens       ?? 0) * p.cacheRead
   )
 }

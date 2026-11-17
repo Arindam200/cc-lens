@@ -83,7 +83,7 @@ describe('getAllParsedSessions', () => {
     expect(s.output_tokens).toBe(50)
     expect(s.cache_read_input_tokens).toBe(1000)
     expect(s.cache_creation_input_tokens).toBe(200)
-    expect(s.model_usage['claude-opus-4-8'].inputTokens).toBe(100)
+    expect(s.model_usage?.['claude-opus-4-8']?.inputTokens).toBe(100)
 
     expect(s.tool_counts).toEqual({ Bash: 1, mcp__foo__bar: 1 })
     expect(s.uses_mcp).toBe(true)

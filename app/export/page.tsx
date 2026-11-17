@@ -227,7 +227,7 @@ export default function ExportPage() {
           <div>
             <h2 className="text-lg font-semibold tracking-tight">What will be exported</h2>
             <p className="text-sm text-muted-foreground mt-1">
-              One JSON file includes stats cache, session metadata, and command history. Numbers below respect the optional date range.
+              One JSON file includes stats cache, session metadata, and command history. The date range limits sessions and command history; the stats cache is always all-time.
             </p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

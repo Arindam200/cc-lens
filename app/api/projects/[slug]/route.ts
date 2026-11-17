@@ -1,7 +1,7 @@
 import path from 'path'
 import { NextResponse } from 'next/server'
 import { getSessions, listProjectJSONLFiles, readJSONLLines, resolveProjectPath } from '@/lib/claude-reader'
-import { estimateCostFromUsage } from '@/lib/pricing'
+import { sessionCost } from '@/lib/insights'
 import { projectDisplayName } from '@/lib/decode'
 import type { SessionWithFacet } from '@/types/claude'
 
@@ -53,12 +53,7 @@ export async function GET(
     const enrich = sessionMeta.get(s.session_id) ?? {}
     return {
       ...s,
-      estimated_cost: estimateCostFromUsage('claude-opus-4-7', {
-        input_tokens: s.input_tokens ?? 0,
-        output_tokens: s.output_tokens ?? 0,
-        cache_creation_input_tokens: s.cache_creation_input_tokens ?? 0,
-        cache_read_input_tokens: s.cache_read_input_tokens ?? 0,
-      }),
+      estimated_cost: sessionCost(s),
       slug: enrich.slug,
       version: enrich.version,
       has_compaction: enrich.has_compaction,

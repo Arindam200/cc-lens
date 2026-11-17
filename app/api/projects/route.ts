@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getSessions, listProjectSlugs, listProjectJSONLFiles, readJSONLLines, resolveProjectPath } from '@/lib/claude-reader'
-import { estimateCostFromUsage } from '@/lib/pricing'
+import { sessionCost } from '@/lib/insights'
 import { projectDisplayName } from '@/lib/decode'
 import type { ProjectSummary } from '@/types/claude'
 
@@ -65,14 +65,7 @@ export async function GET() {
     const inputTokens = sessionList.reduce((s, m) => s + (m.input_tokens ?? 0), 0)
     const outputTokens = sessionList.reduce((s, m) => s + (m.output_tokens ?? 0), 0)
 
-    const estimatedCost = sessionList.reduce((sum, s) => {
-      return sum + estimateCostFromUsage('claude-opus-4-7', {
-        input_tokens: s.input_tokens ?? 0,
-        output_tokens: s.output_tokens ?? 0,
-        cache_creation_input_tokens: s.cache_creation_input_tokens ?? 0,
-        cache_read_input_tokens: s.cache_read_input_tokens ?? 0,
-      })
-    }, 0)
+    const estimatedCost = sessionList.reduce((sum, s) => sum + sessionCost(s), 0)
 
     const languages: Record<string, number> = {}
     for (const s of sessionList) {
