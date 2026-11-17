@@ -1,5 +1,6 @@
 'use client'
 
+import { modelLabel } from '@/lib/model-label'
 import {
   PieChart,
   Pie,
@@ -28,24 +29,6 @@ const MODEL_COLORS = [
   '#ec4899',
 ]
 
-function shortModelName(model: string): string {
-  if (model.includes('opus-4-7'))      return 'Opus 4.7'
-  if (model.includes('opus-4-6'))      return 'Opus 4.6'
-  if (model.includes('opus-4-5'))      return 'Opus 4.5'
-  if (model.includes('opus-4-1'))      return 'Opus 4.1'
-  if (model.includes('opus-4'))        return 'Opus 4'
-  if (model.includes('sonnet-4-6'))    return 'Sonnet 4.6'
-  if (model.includes('sonnet-4-5'))    return 'Sonnet 4.5'
-  if (model.includes('sonnet-4'))      return 'Sonnet 4'
-  if (model.includes('sonnet'))        return 'Sonnet'
-  if (model.includes('haiku-4-5'))     return 'Haiku 4.5'
-  if (model.includes('haiku-3-5'))     return 'Haiku 3.5'
-  if (model.includes('haiku'))         return 'Haiku'
-  // Generic fallback
-  const parts = model.split('-')
-  return parts.slice(0, 3).join('-')
-}
-
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function CustomTooltip({ active, payload }: any) {
   if (!active || !payload?.length) return null
@@ -61,7 +44,7 @@ function CustomTooltip({ active, payload }: any) {
 export function ModelBreakdownDonut({ modelUsage }: Props) {
   const data = Object.entries(modelUsage)
     .map(([model, usage]) => ({
-      name: shortModelName(model),
+      name: modelLabel(model),
       value: (usage.inputTokens ?? 0) + (usage.outputTokens ?? 0) + (usage.cacheReadInputTokens ?? 0) + (usage.cacheCreationInputTokens ?? 0),
     }))
     .filter(d => d.value > 0)

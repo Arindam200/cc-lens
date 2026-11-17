@@ -44,14 +44,21 @@ interface ApiResponse {
     sessionsThisWeek: number
     storageBytes: number
     sessionCount: number
+    unpricedModels?: string[]
   }
 }
 
 type DatePreset = '7d' | '30d' | '90d'
 type CustomRange = { from?: Date; to?: Date }
 
+// 60s ceiling: a request that never settles must surface as an error with a
+// retry button instead of leaving the skeleton up forever.
+const FETCH_TIMEOUT_MS = 60_000
+// Historical analytics change slowly; only /api/live needs a fast poll.
+const HISTORY_REFRESH_MS = 30_000
+
 const fetcher = (url: string) =>
-  fetch(url).then(r => {
+  fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) }).then(r => {
     if (!r.ok) throw new Error(`API error ${r.status}`)
     return r.json()
   })
@@ -118,14 +125,14 @@ export function OverviewClient() {
   const [customRange, setCustomRange] = useState<CustomRange>({})
   const [pickerOpen, setPickerOpen] = useState(false)
 
-  const { data, error, isLoading } = useSWR<ApiResponse>('/api/stats', fetcher, {
-    refreshInterval: 5_000,
+  const { data, error, isLoading, mutate } = useSWR<ApiResponse>('/api/stats', fetcher, {
+    refreshInterval: HISTORY_REFRESH_MS,
   })
   const { data: sessionsData } = useSWR<{ sessions: SessionWithFacet[] }>('/api/sessions', fetcher, {
-    refreshInterval: 5_000,
+    refreshInterval: HISTORY_REFRESH_MS,
   })
   const { data: projectsData } = useSWR<{ projects: ProjectSummary[] }>('/api/projects', fetcher, {
-    refreshInterval: 5_000,
+    refreshInterval: HISTORY_REFRESH_MS,
   })
 
   const sessions = sessionsData?.sessions ?? []
@@ -154,6 +161,7 @@ export function OverviewClient() {
     return (
       <div className="px-6 py-6 text-destructive text-sm font-mono">
         ✗ error loading data: {String(error)}
+        <button className="ml-3 underline" onClick={() => mutate()}>Retry</button>
       </div>
     )
   }
@@ -366,6 +374,12 @@ export function OverviewClient() {
           <p className="text-sm text-muted-foreground mt-0.5">
             {projectCount} projects · {formatBytes(computed.storageBytes)} stored
           </p>
+          {computed.unpricedModels && computed.unpricedModels.length > 0 && (
+            <p className="text-xs text-amber-500 mt-1">
+              No price on file for {computed.unpricedModels.join(', ')}; their cost uses a fallback rate and is approximate.
+              Add a rate in ~/.cc-lens/pricing.json.
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <Tabs

@@ -1,14 +1,6 @@
+import { modelLabel } from '@/lib/model-label'
 import { formatTokens, formatCost } from '@/lib/decode'
 import type { ModelCostBreakdown } from '@/types/claude'
-
-function shortModel(m: string): string {
-  if (m.includes('opus-4-7'))   return 'claude-opus-4.7'
-  if (m.includes('opus-4-6'))   return 'claude-opus-4.6'
-  if (m.includes('opus-4-5'))   return 'claude-opus-4.5'
-  if (m.includes('sonnet-4-6')) return 'claude-sonnet-4.6'
-  if (m.includes('haiku-4-5'))  return 'claude-haiku-4.5'
-  return m
-}
 
 interface Props {
   models: ModelCostBreakdown[]
@@ -38,7 +30,7 @@ export function ModelTokenTable({ models }: Props) {
         <tbody>
           {models.map(m => (
             <tr key={m.model} className="border-b border-border/30 hover:bg-muted/50 transition-colors">
-              <td className="py-2 text-foreground/80">{shortModel(m.model)}</td>
+              <td className="py-2 text-foreground/80">{modelLabel(m.model)}</td>
               <td className="py-2 text-right text-blue-700 dark:text-[#60a5fa]">{formatTokens(m.input_tokens)}</td>
               <td className="py-2 text-right text-[#d97706]">{formatTokens(m.output_tokens)}</td>
               <td className="py-2 text-right text-[#a78bfa]">{formatTokens(m.cache_write_tokens)}</td>

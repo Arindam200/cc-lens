@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import { readStatsCache, getSessions, getClaudeStorageBytes } from '@/lib/claude-reader'
-import { estimateTotalCostFromModel, getPricing } from '@/lib/pricing'
+import { readStatsCache, getSessions, getClaudeStorageBytesFast } from '@/lib/claude-reader'
+import { estimateTotalCostFromModel, getPricing, unpricedModels } from '@/lib/pricing'
 import type { DailyActivity, ModelUsage, SessionMeta } from '@/types/claude'
 
 export const dynamic = 'force-dynamic'
@@ -55,6 +55,7 @@ function computeModelUsageFromSessions(sessions: SessionMeta[]): Record<string, 
       existing.outputTokens += usage.outputTokens ?? 0
       existing.cacheReadInputTokens += usage.cacheReadInputTokens ?? 0
       existing.cacheCreationInputTokens += usage.cacheCreationInputTokens ?? 0
+      existing.cacheCreation1hInputTokens = (existing.cacheCreation1hInputTokens ?? 0) + (usage.cacheCreation1hInputTokens ?? 0)
       existing.costUSD += usage.costUSD ?? 0
       existing.webSearchRequests += usage.webSearchRequests ?? 0
       byModel[model] = existing
@@ -69,14 +70,24 @@ function mergeModelUsage(
   fromSessions: Record<string, ModelUsage>,
 ): Record<string, ModelUsage> {
   if (Object.keys(fromSessions).length === 0) return fromStats
-  return { ...fromStats, ...fromSessions }
+  const merged = { ...fromStats, ...fromSessions }
+  // Session data splits long-prompt turns into `<model>@long`; the stats-cache
+  // row for the base model already includes those tokens, so drop it when the
+  // sessions only carry the @long half (otherwise they are counted twice).
+  for (const key of Object.keys(fromSessions)) {
+    if (key.endsWith('@long')) {
+      const base = key.slice(0, -'@long'.length)
+      if (!(base in fromSessions)) delete merged[base]
+    }
+  }
+  return merged
 }
 
 export async function GET() {
   const [stats, sessions, storageBytes] = await Promise.all([
     readStatsCache(),
     getSessions(),
-    getClaudeStorageBytes(),
+    getClaudeStorageBytesFast(),
   ])
 
   const dailyFromSessions = computeDailyActivityFromSessions(sessions)
@@ -173,6 +184,7 @@ export async function GET() {
       sessionsThisWeek,
       storageBytes,
       sessionCount: sessions.length,
+      unpricedModels: unpricedModels(Object.keys(modelUsage)),
     },
   })
 }

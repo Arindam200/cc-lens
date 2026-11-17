@@ -17,6 +17,8 @@ export interface ModelUsage {
   outputTokens: number
   cacheReadInputTokens: number
   cacheCreationInputTokens: number
+  /** Portion of cacheCreationInputTokens written with the 1-hour TTL (billed at 2x input, not 1.25x). */
+  cacheCreation1hInputTokens?: number
   costUSD: number
   webSearchRequests: number
 }
@@ -78,6 +80,7 @@ export interface SessionMeta {
   message_hours: number[]
   user_message_timestamps: string[]
   model_usage?: Record<string, ModelUsage>
+  estimated_cost?: number
 }
 
 // ─── Facets ──────────────────────────────────────────────────────────────────
@@ -339,6 +342,35 @@ export interface HistoryEntry {
 
 // ─── Export ──────────────────────────────────────────────────────────────────
 
+export interface ExportCostSummary {
+  /** Models with no pricing entry; their cost uses a fallback rate and is approximate. */
+  unpricedModels?: string[]
+  totalEstimatedCostUSD: number
+  totalCacheSavingsUSD: number
+  totalTokens: {
+    input: number
+    output: number
+    cacheRead: number
+    cacheWrite: number
+    total: number
+  }
+  models: Record<string, {
+    costUSD: number
+    savedUSD: number
+    inputTokens: number
+    outputTokens: number
+    cacheReadTokens: number
+    cacheWriteTokens: number
+    sessions: number
+  }>
+  topProjects: Array<{
+    project: string
+    sessions: number
+    costUSD: number
+  }>
+  dailyCosts: Record<string, number>
+}
+
 export interface ExportPayload {
   exportedAt: string
   version: string
@@ -346,6 +378,9 @@ export interface ExportPayload {
   sessions: SessionMeta[]
   facets: Facet[]
   history: HistoryEntry[]
+  costSummary?: ExportCostSummary
+  /** Which sections the requested date range actually limited. `stats` is the all-time stats-cache. */
+  scope?: { sessions: 'all' | 'date-range'; history: 'all' | 'date-range'; stats: 'all-time' }
 }
 
 export interface ImportDiff {

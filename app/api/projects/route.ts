@@ -1,13 +1,10 @@
 import { NextResponse } from 'next/server'
-import { getSessions, listProjectSlugs, listProjectJSONLFiles, readJSONLLines, resolveProjectPath } from '@/lib/claude-reader'
-import { estimateCostFromUsage } from '@/lib/pricing'
+import { getSessions, listProjectSlugs, resolveProjectPath, type ParsedSession } from '@/lib/claude-reader'
+import { sessionCost } from '@/lib/insights'
 import { projectDisplayName } from '@/lib/decode'
 import type { ProjectSummary } from '@/types/claude'
 
 export const dynamic = 'force-dynamic'
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnyLine = Record<string, any>
 
 export async function GET() {
   const [sessions, slugDirs] = await Promise.all([getSessions(), listProjectSlugs()])
@@ -29,24 +26,14 @@ export async function GET() {
     byPath.get(pp)!.push(s)
   }
 
-  // Gather branches per slug from JSONL
+  // Branches come from the shared session parse (no second JSONL scan)
   const slugBranches = new Map<string, Set<string>>()
-  await Promise.all(
-    slugDirs.map(async (slug) => {
-      const files = await listProjectJSONLFiles(slug)
-      const branches = new Set<string>()
-      await Promise.all(
-        files.map(async (f) => {
-          await readJSONLLines(f, (line: AnyLine) => {
-            if (line.gitBranch && line.gitBranch !== 'HEAD') {
-              branches.add(line.gitBranch)
-            }
-          })
-        })
-      )
-      slugBranches.set(slug, branches)
-    })
-  )
+  for (const s of sessions as ParsedSession[]) {
+    if (!s.project_slug || !s.git_branches?.length) continue
+    const set = slugBranches.get(s.project_slug) ?? new Set<string>()
+    for (const b of s.git_branches) set.add(b)
+    slugBranches.set(s.project_slug, set)
+  }
 
   const projects: ProjectSummary[] = []
 
@@ -65,14 +52,7 @@ export async function GET() {
     const inputTokens = sessionList.reduce((s, m) => s + (m.input_tokens ?? 0), 0)
     const outputTokens = sessionList.reduce((s, m) => s + (m.output_tokens ?? 0), 0)
 
-    const estimatedCost = sessionList.reduce((sum, s) => {
-      return sum + estimateCostFromUsage('claude-opus-4-7', {
-        input_tokens: s.input_tokens ?? 0,
-        output_tokens: s.output_tokens ?? 0,
-        cache_creation_input_tokens: s.cache_creation_input_tokens ?? 0,
-        cache_read_input_tokens: s.cache_read_input_tokens ?? 0,
-      })
-    }, 0)
+    const estimatedCost = sessionList.reduce((sum, s) => sum + sessionCost(s), 0)
 
     const languages: Record<string, number> = {}
     for (const s of sessionList) {

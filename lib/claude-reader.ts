@@ -11,7 +11,7 @@ import type {
   LiveSession,
 } from '@/types/claude'
 import { slugToPath } from '@/lib/decode'
-import { estimateCostFromUsage } from '@/lib/pricing'
+import { pricingBucket, estimateCostFromUsage } from '@/lib/pricing'
 
 function stripXmlTags(text: string): string {
   return text
@@ -48,16 +48,87 @@ export interface ParsedSession extends SessionMeta {
   ai_title?: string
   cc_version?: string
   git_branch?: string
+  /** Every distinct non-HEAD branch seen in the file (feeds the projects page without a second scan) */
+  git_branches?: string[]
+  project_slug?: string
   has_compaction: boolean
   has_thinking: boolean
 }
 
 interface CacheEntry {
   mtimeMs: number
+  size: number
   promise: Promise<ParsedSession | null>
 }
 
 const sessionCache = new Map<string, CacheEntry>()
+
+// ─── Persistent parse cache ───────────────────────────────────────────────────
+// Cold-parsing a multi-GB ~/.claude/projects tree takes tens of seconds (22 s on
+// 6.3 GB). Completed sessions never change, so parsed results are saved to
+// ~/.cc-lens/cache and reused on the next start, keyed on mtime + size. Bump
+// PARSE_CACHE_VERSION whenever parseSessionFile's output shape changes.
+const PARSE_CACHE_VERSION = 3
+
+interface DiskEntry { mtimeMs: number; size: number; session: ParsedSession }
+let diskCache: Map<string, DiskEntry> | null = null
+let diskCacheDirty = false
+let diskSaveTimer: ReturnType<typeof setTimeout> | null = null
+let flushing = false
+
+function parseCacheFile(): string {
+  const dir = process.env.CC_LENS_CONFIG_DIR ?? path.join(os.homedir(), '.cc-lens')
+  return path.join(dir, 'cache', 'sessions.json')
+}
+
+async function loadDiskCache(): Promise<Map<string, DiskEntry>> {
+  if (diskCache) return diskCache
+  diskCache = new Map()
+  // Skipped under tests/demo so fixtures never read a real user's cache
+  if (process.env.CC_LENS_NO_DISK_CACHE || process.env.CC_LENS_DEMO) return diskCache
+  try {
+    const raw = JSON.parse(await fs.readFile(parseCacheFile(), 'utf-8')) as { version?: number; claudeDir?: string; entries?: Record<string, DiskEntry> }
+    if (raw.version === PARSE_CACHE_VERSION && raw.claudeDir === claudeDir() && raw.entries) {
+      for (const [k, v] of Object.entries(raw.entries)) {
+        const s = v?.session
+        if (typeof v?.mtimeMs === 'number' && typeof v?.size === 'number' && s && typeof s.session_id === 'string' && typeof s.start_time === 'string') diskCache.set(k, v)
+      }
+    }
+  } catch { /* no cache yet, or unreadable: start cold */ }
+  return diskCache
+}
+
+/** Write the parse cache now (normally debounced 2 s after a scan). */
+export async function flushSessionDiskCache(): Promise<void> {
+  if (diskSaveTimer) { clearTimeout(diskSaveTimer); diskSaveTimer = null }
+  if (process.env.CC_LENS_NO_DISK_CACHE || process.env.CC_LENS_DEMO || !diskCacheDirty || flushing) return
+  diskCacheDirty = false
+  flushing = true
+  try {
+    const file = parseCacheFile()
+    await fs.mkdir(path.dirname(file), { recursive: true })
+    const tmp = `${file}.${process.pid}.${Date.now()}.tmp`
+    // 0o600: the cache holds first prompts and project paths
+    await fs.writeFile(tmp, JSON.stringify({ version: PARSE_CACHE_VERSION, claudeDir: claudeDir(), entries: Object.fromEntries(diskCache ?? []) }), { mode: 0o600 })
+    await fs.rename(tmp, file)
+  } catch {
+    diskCacheDirty = true // retry on the next scan
+  } finally {
+    flushing = false
+  }
+}
+
+function scheduleDiskSave(): void {
+  if (process.env.CC_LENS_NO_DISK_CACHE || !diskCacheDirty || diskSaveTimer) return
+  diskSaveTimer = setTimeout(() => { void flushSessionDiskCache() }, 2_000)
+  diskSaveTimer.unref?.()
+}
+
+/** Forget in-memory state so the next scan reloads the disk cache (tests). */
+export function resetSessionCachesForTests(): void {
+  sessionCache.clear(); diskCache = null; diskCacheDirty = false
+  if (diskSaveTimer) { clearTimeout(diskSaveTimer); diskSaveTimer = null }
+}
 const projectCwdCache = new Map<string, string>()
 
 /** Resolve the real filesystem path for a project slug by reading `cwd` from its JSONL files */
@@ -66,24 +137,37 @@ export async function resolveProjectPath(slug: string): Promise<string> {
   if (cached) return cached
   const files = await listProjectJSONLFiles(slug)
   for (const f of files) {
-    try {
-      const raw = await fs.readFile(f, 'utf-8')
-      const lines = raw.split(/\r?\n/)
-      for (const line of lines.slice(0, 50)) {
-        if (!line.trim()) continue
-        try {
-          const obj = JSON.parse(line)
-          if (obj.cwd && typeof obj.cwd === 'string') {
-            projectCwdCache.set(slug, obj.cwd)
-            return obj.cwd
-          }
-        } catch { /* skip malformed line */ }
-      }
-    } catch { /* try next file */ }
+    // Stream only the head of the file: cwd shows up in the first records, and
+    // session JSONLs can be tens of MB.
+    const cwd = await readCwdFromHead(f, 50)
+    if (cwd) {
+      projectCwdCache.set(slug, cwd)
+      return cwd
+    }
   }
   // No cwd recovered — drop any stale cache entry before falling back
   projectCwdCache.delete(slug)
   return slugToPath(slug)
+}
+
+async function readCwdFromHead(filePath: string, maxLines: number): Promise<string | undefined> {
+  const stream = createReadStream(filePath, { encoding: 'utf-8' })
+  const rl = createInterface({ input: stream, crlfDelay: Infinity })
+  let seen = 0
+  try {
+    for await (const line of rl) {
+      if (++seen > maxLines) break
+      if (!line.trim()) continue
+      try {
+        const obj = JSON.parse(line)
+        if (obj.cwd && typeof obj.cwd === 'string') return obj.cwd
+      } catch { /* skip malformed line */ }
+    }
+  } catch { /* unreadable file: try next */ } finally {
+    rl.close()
+    stream.destroy()
+  }
+  return undefined
 }
 
 // Resolved lazily (not cached at module load) so a CLAUDE_CONFIG_DIR set after
@@ -133,6 +217,7 @@ async function parseSessionFile(filePath: string, sessionId: string): Promise<Pa
   let aiTitle: string | undefined
   let ccVersion: string | undefined
   let gitBranch: string | undefined
+  const gitBranches = new Set<string>()
   let hasCompaction = false
   let hasThinking = false
   const modelUsage: Record<string, ModelUsage> = {}
@@ -158,8 +243,9 @@ async function parseSessionFile(filePath: string, sessionId: string): Promise<Pa
         // ai-title lines repeat as the title is refined; the last one wins
         if (obj.type === 'ai-title' && typeof obj.aiTitle === 'string') aiTitle = obj.aiTitle
         if (!ccVersion && typeof obj.version === 'string') ccVersion = obj.version
-        if (typeof obj.gitBranch === 'string' && obj.gitBranch !== 'HEAD' && !gitBranch) {
-          gitBranch = obj.gitBranch
+        if (typeof obj.gitBranch === 'string' && obj.gitBranch !== 'HEAD') {
+          if (!gitBranch) gitBranch = obj.gitBranch
+          gitBranches.add(obj.gitBranch)
         }
         if (obj.type === 'system' && (obj as { subtype?: string }).subtype === 'compact_boundary') {
           hasCompaction = true
@@ -184,7 +270,7 @@ async function parseSessionFile(filePath: string, sessionId: string): Promise<Pa
         }
         if (obj.type === 'assistant') {
           assistantCount++
-          const msg = (obj as { message?: { model?: string; usage?: Record<string, number>; content?: unknown[] } }).message
+          const msg = (obj as { message?: { model?: string; usage?: Record<string, number> & { cache_creation?: { ephemeral_1h_input_tokens?: number } }; content?: unknown[] } }).message
           if (msg?.usage) {
             const turnInput = msg.usage.input_tokens ?? 0
             const turnOutput = msg.usage.output_tokens ?? 0
@@ -196,7 +282,9 @@ async function parseSessionFile(filePath: string, sessionId: string): Promise<Pa
             cacheWrite += turnCacheWrite
 
             if (msg.model) {
-              const existing = modelUsage[msg.model] ?? {
+              // Long-prompt Haiku turns land in their own `@long` bucket (higher rate)
+              const bucket = pricingBucket(msg.model, turnInput + turnCacheRead + turnCacheWrite)
+              const existing = modelUsage[bucket] ?? {
                 inputTokens: 0,
                 outputTokens: 0,
                 cacheReadInputTokens: 0,
@@ -208,7 +296,9 @@ async function parseSessionFile(filePath: string, sessionId: string): Promise<Pa
               existing.outputTokens += turnOutput
               existing.cacheReadInputTokens += turnCacheRead
               existing.cacheCreationInputTokens += turnCacheWrite
-              modelUsage[msg.model] = existing
+              existing.cacheCreation1hInputTokens =
+                (existing.cacheCreation1hInputTokens ?? 0) + (msg.usage.cache_creation?.ephemeral_1h_input_tokens ?? 0)
+              modelUsage[bucket] = existing
             }
           }
           const content = msg?.content
@@ -281,6 +371,7 @@ async function parseSessionFile(filePath: string, sessionId: string): Promise<Pa
     ai_title: aiTitle,
     cc_version: ccVersion,
     git_branch: gitBranch,
+    git_branches: [...gitBranches],
     has_compaction: hasCompaction,
     has_thinking: hasThinking,
   }
@@ -301,7 +392,8 @@ export async function getAllParsedSessions(): Promise<ParsedSession[]> {
     return []
   }
 
-  type FileEntry = { slug: string; filePath: string; sessionId: string; mtimeMs: number }
+  type FileEntry = { slug: string; filePath: string; sessionId: string; mtimeMs: number; size: number }
+  const disk = await loadDiskCache()
   const fileEntries: FileEntry[] = []
 
   await Promise.all(slugs.map(async (slug) => {
@@ -314,6 +406,7 @@ export async function getAllParsedSessions(): Promise<ParsedSession[]> {
           filePath,
           sessionId: path.basename(filePath, '.jsonl'),
           mtimeMs: stat.mtimeMs,
+          size: stat.size,
         })
       } catch { /* file vanished between readdir and stat */ }
     }))
@@ -324,27 +417,42 @@ export async function getAllParsedSessions(): Promise<ParsedSession[]> {
   for (const key of sessionCache.keys()) {
     if (!seen.has(key)) sessionCache.delete(key)
   }
+  // An empty scan with a populated cache means the projects dir was unreadable,
+  // not that every session vanished: keep the cache.
+  if (fileEntries.length > 0 || disk.size === 0) {
+    for (const key of [...disk.keys()]) {
+      if (!seen.has(key)) { disk.delete(key); diskCacheDirty = true }
+    }
+  }
 
   // Parse (or reuse cached) with bounded concurrency; cache stores the
   // in-flight promise so concurrent requests for the same file dedupe to one
   // parse.
   const parsed = await mapPool(fileEntries, 16, async (f) => {
     const cached = sessionCache.get(f.filePath)
-    if (cached && cached.mtimeMs === f.mtimeMs) {
+    if (cached && cached.mtimeMs === f.mtimeMs && cached.size === f.size) {
       return { slug: f.slug, session: await cached.promise }
+    }
+    const onDisk = disk.get(f.filePath)
+    if (onDisk && onDisk.mtimeMs === f.mtimeMs && onDisk.size === f.size) {
+      sessionCache.set(f.filePath, { mtimeMs: f.mtimeMs, size: f.size, promise: Promise.resolve(onDisk.session) })
+      return { slug: f.slug, session: onDisk.session }
     }
     // Failed parses are evicted so a transient read error doesn't hide the
     // session until the file's mtime happens to change again.
     const promise = parseSessionFile(f.filePath, f.sessionId).then(session => {
       if (!session) sessionCache.delete(f.filePath)
+      else { disk.set(f.filePath, { mtimeMs: f.mtimeMs, size: f.size, session }); diskCacheDirty = true }
       return session
     }, err => {
       sessionCache.delete(f.filePath)
       throw err
     })
-    sessionCache.set(f.filePath, { mtimeMs: f.mtimeMs, promise })
+    sessionCache.set(f.filePath, { mtimeMs: f.mtimeMs, size: f.size, promise })
     return { slug: f.slug, session: await promise }
   })
+
+  scheduleDiskSave()
 
   // Build slug → cwd map from any session that captured one
   const slugCwd = new Map<string, string>()
@@ -365,6 +473,7 @@ export async function getAllParsedSessions(): Promise<ParsedSession[]> {
     results.push({
       ...session,
       project_path: slugCwd.get(slug) ?? slugToPath(slug),
+      project_slug: slug,
     })
   }
 
@@ -377,9 +486,51 @@ export async function readSessionsFromProjectJSONL(): Promise<SessionMeta[]> {
   return getAllParsedSessions()
 }
 
+/**
+ * Shared, single-flight session snapshot. The Overview fires /api/stats,
+ * /api/sessions and /api/projects together; without this each one re-lists and
+ * re-stats every JSONL. Concurrent callers share one scan, and a result stays
+ * reusable for a short TTL so all three routes see the same data.
+ */
+const SNAPSHOT_TTL_MS = 3_000
+// Past the TTL a stale snapshot is still served instantly while a refresh runs
+// in the background; only beyond this age does a caller wait for a fresh scan.
+const SNAPSHOT_MAX_STALE_MS = 30_000
+let snapshotInflight: Promise<ParsedSession[]> | null = null
+let snapshot: { at: number; value: ParsedSession[] } | null = null
+
+function refreshSnapshot(): Promise<ParsedSession[]> {
+  if (!snapshotInflight) {
+    snapshotInflight = getAllParsedSessions()
+      .then(value => {
+        snapshot = { at: Date.now(), value }
+        return value
+      })
+      .finally(() => { snapshotInflight = null })
+  }
+  return snapshotInflight
+}
+
+export async function getSessionSnapshot(): Promise<ParsedSession[]> {
+  if (snapshot) {
+    const age = Date.now() - snapshot.at
+    if (age < SNAPSHOT_TTL_MS) return snapshot.value
+    if (age < SNAPSHOT_MAX_STALE_MS) {
+      void refreshSnapshot().catch(() => {})
+      return snapshot.value
+    }
+  }
+  return refreshSnapshot()
+}
+
+/** Drop the cached snapshot (tests, manual refresh) */
+export function invalidateSessionSnapshot(): void {
+  snapshot = null
+}
+
 /** Get all sessions derived from projects/*.jsonl */
 export async function getSessions(): Promise<SessionMeta[]> {
-  return getAllParsedSessions()
+  return getSessionSnapshot()
 }
 
 // ─── Live Sessions (~/.claude/sessions/*.json) ───────────────────────────────
@@ -614,16 +765,37 @@ export async function readTaskSessions(): Promise<TaskSession[]> {
 // ─── History ─────────────────────────────────────────────────────────────────
 
 export async function readHistory(limit = 200): Promise<HistoryEntry[]> {
+  if (limit <= 0) return []
   const entries: HistoryEntry[] = []
+  let fh: Awaited<ReturnType<typeof fs.open>> | undefined
   try {
-    const raw = await fs.readFile(claudePath('history.jsonl'), 'utf-8')
-    const lines = raw.split(/\r?\n/).filter(Boolean)
-    for (const line of lines.slice(-limit)) {
+    fh = await fs.open(claudePath('history.jsonl'), 'r')
+    const { size } = await fh.stat()
+    // Read backwards in 64 KiB chunks until we hold `limit` complete lines, so
+    // memory scales with the limit, not the size of history.jsonl.
+    const CHUNK = 64 * 1024
+    let pos = size
+    let tail = Buffer.alloc(0)
+    let lineCount = 0
+    while (pos > 0 && lineCount <= limit) {
+      const len = Math.min(CHUNK, pos)
+      pos -= len
+      const buf = Buffer.alloc(len)
+      await fh.read(buf, 0, len, pos)
+      tail = Buffer.concat([buf, tail])
+      lineCount = 0
+      for (const b of tail) if (b === 10) lineCount++
+    }
+    let lines = tail.toString('utf-8').split(/\r?\n/)
+    if (pos > 0) lines = lines.slice(1) // first line is partial unless we reached byte 0
+    for (const line of lines.filter(Boolean).slice(-limit)) {
       try {
         entries.push(JSON.parse(line) as HistoryEntry)
       } catch { /* skip */ }
     }
-  } catch { /* file missing */ }
+  } catch { /* file missing */ } finally {
+    await fh?.close()
+  }
   return entries
 }
 
@@ -865,17 +1037,18 @@ function extractTurns(filePath: string, sinceMs: number): Promise<UsageTurn[]> {
     if (obj.type !== 'assistant') return
     const ts = typeof obj.timestamp === 'string' ? Date.parse(obj.timestamp) : NaN
     if (isNaN(ts) || ts < sinceMs) return
-    const msg = (obj as { message?: { model?: string; usage?: Record<string, number> } }).message
+    const msg = (obj as { message?: { model?: string; usage?: Record<string, number> & { cache_creation?: { ephemeral_5m_input_tokens: number; ephemeral_1h_input_tokens: number } } } }).message
     if (!msg?.usage || !msg.model) return
     const usage = msg.usage
     turns.push({
       ts,
       model: msg.model,
-      costUSD: estimateCostFromUsage(msg.model, {
+      costUSD: estimateCostFromUsage(pricingBucket(msg.model, (usage.input_tokens ?? 0) + (usage.cache_read_input_tokens ?? 0) + (usage.cache_creation_input_tokens ?? 0)), {
         input_tokens: usage.input_tokens ?? 0,
         output_tokens: usage.output_tokens ?? 0,
         cache_creation_input_tokens: usage.cache_creation_input_tokens ?? 0,
         cache_read_input_tokens: usage.cache_read_input_tokens ?? 0,
+        cache_creation: usage.cache_creation,
       }),
       inputTokens: usage.input_tokens ?? 0,
       outputTokens: usage.output_tokens ?? 0,
@@ -962,26 +1135,56 @@ export async function readAccountInfo(): Promise<ClaudeAccountInfo> {
 
 // ─── Storage size ─────────────────────────────────────────────────────────────
 
+const STORAGE_TTL_MS = 60_000
+let storageCache: { at: number; value: number } | null = null
+let storageInflight: Promise<number> | null = null
+
+/** Recursive size of the Claude config dir. Cached for a minute: it changes
+ * slowly and walking ~/.claude on every 5s poll is wasted disk I/O. */
 export async function getClaudeStorageBytes(): Promise<number> {
-  async function dirSize(dirPath: string): Promise<number> {
-    let total = 0
-    try {
-      const entries = await fs.readdir(dirPath, { withFileTypes: true })
-      await Promise.all(
-        entries.map(async e => {
-          const full = path.join(dirPath, e.name)
-          if (e.isDirectory()) {
-            total += await dirSize(full)
-          } else {
-            try {
-              const stat = await fs.stat(full)
-              total += stat.size
-            } catch { /* skip */ }
-          }
-        })
-      )
-    } catch { /* skip inaccessible dirs */ }
-    return total
+  if (storageCache && Date.now() - storageCache.at < STORAGE_TTL_MS) return storageCache.value
+  if (!storageInflight) {
+    storageInflight = walkStorageBytes()
+      .then(value => {
+        storageCache = { at: Date.now(), value }
+        return value
+      })
+      .finally(() => { storageInflight = null })
   }
-  return dirSize(claudeDir())
+  return storageInflight
+}
+
+/** Storage size, but never hold the caller up: if the (cached) walk isn't done
+ * within `waitMs`, return the last known value (0 on first call). The walk keeps
+ * running and the next poll gets the real number. */
+export async function getClaudeStorageBytesFast(waitMs = 800): Promise<number> {
+  const slow = getClaudeStorageBytes()
+  const timeout = new Promise<number>(resolve => {
+    const t = setTimeout(() => resolve(storageCache?.value ?? 0), waitMs)
+    t.unref?.()
+  })
+  return Promise.race([slow, timeout])
+}
+
+async function walkStorageBytes(): Promise<number> {
+  let total = 0
+  const queue: string[] = [claudeDir()]
+  while (queue.length > 0) {
+    const batch = queue.splice(0, 16)
+    await Promise.all(batch.map(async (dirPath) => {
+      try {
+        const entries = await fs.readdir(dirPath, { withFileTypes: true })
+        const files: string[] = []
+        for (const e of entries) {
+          const full = path.join(dirPath, e.name)
+          if (e.isDirectory()) queue.push(full)
+          else files.push(full)
+        }
+        await mapPool(files, 32, async (f) => {
+          try { total += (await fs.stat(f)).size } catch { /* skip */ }
+        })
+      } catch { /* skip inaccessible dirs */ }
+    }))
+  }
+  return total
 }

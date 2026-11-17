@@ -7,6 +7,7 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
+    env: { CC_LENS_NO_DISK_CACHE: '1' },
     include: ['lib/**/*.test.ts'],
   },
 })

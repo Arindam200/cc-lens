@@ -1,5 +1,6 @@
 'use client'
 
+import { modelLabel } from '@/lib/model-label'
 import { useMemo } from 'react'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer } from 'recharts'
 import { formatCost } from '@/lib/decode'
@@ -18,15 +19,6 @@ function colorForModel(m: string): string {
     if (m.includes(key.split('-').slice(2).join('-'))) return col
   }
   return '#7a8494'
-}
-
-function shortModel(m: string): string {
-  if (m.includes('opus-4-7'))   return 'Opus 4.7'
-  if (m.includes('opus-4-6'))   return 'Opus 4.6'
-  if (m.includes('opus-4-5'))   return 'Opus 4.5'
-  if (m.includes('sonnet-4-6')) return 'Sonnet 4.6'
-  if (m.includes('haiku-4-5'))  return 'Haiku 4.5'
-  return m
 }
 
 interface Props {
@@ -78,7 +70,7 @@ export function CostOverTimeChart({ daily, window, onWindowChange }: Props) {
           <YAxis tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} tickLine={false} axisLine={false} tickFormatter={v => `$${v.toFixed(2)}`} width={48} />
           <Tooltip
             contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 4, fontSize: 12 }}
-            formatter={(val: number | undefined, name?: string) => [formatCost(val ?? 0), shortModel(name ?? '')]}
+            formatter={(val: number | undefined, name?: string) => [formatCost(val ?? 0), modelLabel(name ?? '')]}
           />
           {models.map(m => (
             <Area
