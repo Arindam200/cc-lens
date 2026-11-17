@@ -6,7 +6,7 @@ Thanks for helping improve `cc-lens`. This project reads private local Claude Co
 
 Requirements:
 
-- Node.js 18 or newer
+- Node.js 20 or newer
 - npm
 - Claude Code data in `~/.claude/` for realistic local testing
 

@@ -53,7 +53,7 @@ export function UsagePill() {
           {countdown && <span className="text-muted-foreground tabular-nums hidden md:inline">· {countdown}</span>}
         </>
       ) : (
-        <span className="text-emerald-500 font-medium">Ready</span>
+        <span className="text-emerald-500 font-medium">5h available</span>
       )}
     </Link>
   )
