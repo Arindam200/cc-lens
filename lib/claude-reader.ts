@@ -493,11 +493,13 @@ export async function readSessionsFromProjectJSONL(): Promise<SessionMeta[]> {
  * reusable for a short TTL so all three routes see the same data.
  */
 const SNAPSHOT_TTL_MS = 3_000
+// Past the TTL a stale snapshot is still served instantly while a refresh runs
+// in the background; only beyond this age does a caller wait for a fresh scan.
+const SNAPSHOT_MAX_STALE_MS = 30_000
 let snapshotInflight: Promise<ParsedSession[]> | null = null
 let snapshot: { at: number; value: ParsedSession[] } | null = null
 
-export async function getSessionSnapshot(): Promise<ParsedSession[]> {
-  if (snapshot && Date.now() - snapshot.at < SNAPSHOT_TTL_MS) return snapshot.value
+function refreshSnapshot(): Promise<ParsedSession[]> {
   if (!snapshotInflight) {
     snapshotInflight = getAllParsedSessions()
       .then(value => {
@@ -507,6 +509,18 @@ export async function getSessionSnapshot(): Promise<ParsedSession[]> {
       .finally(() => { snapshotInflight = null })
   }
   return snapshotInflight
+}
+
+export async function getSessionSnapshot(): Promise<ParsedSession[]> {
+  if (snapshot) {
+    const age = Date.now() - snapshot.at
+    if (age < SNAPSHOT_TTL_MS) return snapshot.value
+    if (age < SNAPSHOT_MAX_STALE_MS) {
+      void refreshSnapshot().catch(() => {})
+      return snapshot.value
+    }
+  }
+  return refreshSnapshot()
 }
 
 /** Drop the cached snapshot (tests, manual refresh) */
