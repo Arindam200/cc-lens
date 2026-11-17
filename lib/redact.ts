@@ -23,6 +23,42 @@ function coarsenTimestamp(ts: string | undefined): string | undefined {
   return `${ts.slice(0, 13)}:00:00.000Z`
 }
 
+const MAX_MAP_KEYS = 500
+
+function num(v: unknown): number {
+  return typeof v === 'number' && Number.isFinite(v) ? v : 0
+}
+
+/** Rebuild a string→number map, dropping non-numeric values and capping size. */
+function numberMap(v: unknown): Record<string, number> {
+  const out: Record<string, number> = {}
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return out
+  for (const [k, val] of Object.entries(v as Record<string, unknown>).slice(0, MAX_MAP_KEYS)) {
+    if (typeof val === 'number' && Number.isFinite(val)) out[k] = val
+  }
+  return out
+}
+
+/** Rebuild model_usage from known numeric fields only; extra keys cannot ride along. */
+function sanitizeModelUsage(v: unknown): SessionMeta['model_usage'] {
+  const out: NonNullable<SessionMeta['model_usage']> = {}
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return out
+  for (const [model, u] of Object.entries(v as Record<string, unknown>).slice(0, MAX_MAP_KEYS)) {
+    if (!u || typeof u !== 'object') continue
+    const r = u as Record<string, unknown>
+    out[model] = {
+      inputTokens: num(r.inputTokens),
+      outputTokens: num(r.outputTokens),
+      cacheReadInputTokens: num(r.cacheReadInputTokens),
+      cacheCreationInputTokens: num(r.cacheCreationInputTokens),
+      cacheCreation1hInputTokens: num(r.cacheCreation1hInputTokens),
+      costUSD: num(r.costUSD),
+      webSearchRequests: num(r.webSearchRequests),
+    }
+  }
+  return out
+}
+
 export function redactSession(session: SessionMeta, level: RedactionLevel): SessionMeta {
   return {
     session_id: session.session_id,
@@ -32,8 +68,8 @@ export function redactSession(session: SessionMeta, level: RedactionLevel): Sess
     duration_minutes: session.duration_minutes,
     user_message_count: session.user_message_count,
     assistant_message_count: session.assistant_message_count,
-    tool_counts: session.tool_counts,
-    languages: session.languages,
+    tool_counts: numberMap(session.tool_counts),
+    languages: numberMap(session.languages),
     git_commits: session.git_commits,
     git_pushes: session.git_pushes,
     input_tokens: session.input_tokens,
@@ -44,7 +80,7 @@ export function redactSession(session: SessionMeta, level: RedactionLevel): Sess
     user_interruptions: session.user_interruptions,
     user_response_times: [],
     tool_errors: session.tool_errors,
-    tool_error_categories: session.tool_error_categories,
+    tool_error_categories: numberMap(session.tool_error_categories),
     uses_task_agent: session.uses_task_agent,
     uses_mcp: session.uses_mcp,
     uses_web_search: session.uses_web_search,
@@ -54,7 +90,7 @@ export function redactSession(session: SessionMeta, level: RedactionLevel): Sess
     files_modified: session.files_modified,
     message_hours: session.message_hours,
     user_message_timestamps: [],
-    model_usage: session.model_usage,
+    model_usage: sanitizeModelUsage(session.model_usage),
   }
 }
 
