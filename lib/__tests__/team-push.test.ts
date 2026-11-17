@@ -51,12 +51,18 @@ afterEach(() => {
 })
 
 describe('POST /api/team/push', () => {
+  it('does not overwrite a different member whose name slugifies the same', async () => {
+    const a = await (await POST(request(makePayload({ member: { name: 'Alice Smith', machine: 'laptop' } })))).json()
+    const b = await (await POST(request(makePayload({ member: { name: 'Alice-Smith', machine: 'laptop' } })))).json()
+    expect(a.stored_as).not.toBe(b.stored_as)
+  })
+
   it('stores a valid payload in the team dir', async () => {
     const res = await POST(request(makePayload()))
     expect(res.status).toBe(200)
     const json = await res.json()
     expect(json.ok).toBe(true)
-    expect(json.stored_as).toBe('alice-smith--laptop.json')
+    expect(json.stored_as).toMatch(/^alice-smith--laptop--[0-9a-f]{10}\.json$/)
 
     const analytics = await getTeamAnalytics(dir)
     expect(analytics.members.some(m => m.member.name === 'Alice Smith')).toBe(true)
@@ -105,7 +111,7 @@ describe('POST /api/team/push', () => {
     const res = await POST(request(sneaky))
     expect(res.status).toBe(200)
 
-    const stored = JSON.parse(await fs.readFile(path.join(dir, 'alice-smith--laptop.json'), 'utf-8'))
+    const stored = JSON.parse(await fs.readFile(path.join(dir, (await res.json()).stored_as), 'utf-8'))
     const s = stored.sessions[0]
     expect(s.first_prompt).toBe('')
     expect(s.project_path).toBe('repo')

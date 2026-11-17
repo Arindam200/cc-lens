@@ -320,14 +320,18 @@ async function main() {
   // wider than intended (issue #21).
   const hostname = (typeof args.host === 'string' && args.host) || process.env.CC_LENS_HOST || '127.0.0.1'
   const port     = await findFreePort(Number(args.port ?? process.env.PORT) || 3000, hostname)
-  const url      = `http://${hostname === '0.0.0.0' ? 'localhost' : hostname}:${port}`
+  const loopback = ['127.0.0.1', 'localhost', '::1'].includes(hostname)
+  // Non-loopback binds expose private history and a memory-write API: require
+  // an access token (printed once, kept in an HttpOnly cookie by proxy.ts).
+  const accessToken = process.env.CC_LENS_ACCESS_TOKEN || (loopback ? '' : require('crypto').randomBytes(24).toString('hex'))
+  const url      = `http://${hostname === '0.0.0.0' ? 'localhost' : hostname}:${port}` + (accessToken ? `/?token=${accessToken}` : '')
 
   console.log(`  ${DIM}Starting server on${R} ${O2}${B}${url}${R}\n`)
 
   const child = spawn(process.execPath, [SERVER_JS], {
     cwd: path.dirname(SERVER_JS),
     stdio: [process.platform === 'win32' ? 'ignore' : 'inherit', 'pipe', 'pipe'],
-    env: { ...process.env, PORT: String(port), HOSTNAME: hostname, NODE_ENV: 'production' },
+    env: { ...process.env, PORT: String(port), HOSTNAME: hostname, NODE_ENV: 'production', ...(accessToken ? { CC_LENS_ACCESS_TOKEN: accessToken } : {}) },
   })
 
   let opened = false

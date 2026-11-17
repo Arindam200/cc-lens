@@ -17,6 +17,8 @@ export interface ModelUsage {
   outputTokens: number
   cacheReadInputTokens: number
   cacheCreationInputTokens: number
+  /** Portion of cacheCreationInputTokens written with the 1-hour TTL (billed at 2x input, not 1.25x). */
+  cacheCreation1hInputTokens?: number
   costUSD: number
   webSearchRequests: number
 }
